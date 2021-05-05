@@ -221,6 +221,25 @@ for(i in 1:length(results)) {
 
 L'origine du NA vient donc de l'algorithme VonNeumann lui-même.
 
+Après après avoir continué les recherches, nous nous sommes rendu compte que le problème vient du fait que la fonction qui calculait le nombre de bits à considérer pour un nombre donné renvoyait 0 au lieu de 1 pour le nombre 0. En voici une version corrigée :
+
+```{r echo=FALSE}
+## get the number of bits to use to convert a decimal to binary
+bitsNecessary <- function(decimalNumber) {
+  if(decimalNumber == 0) return(1);
+  return(log2(decimalNumber) + 1);
+}
+```
+
+On trouve alors les résultats corrigés suivant : 
+
+```{r}
+cat('average pValeur VonNeumann : ', computeAvgPValeur(VonNeumann, 1000, 100, 9999, FALSE), '\n')
+cat('average pValeur RANDU : ', computeAvgPValeur(RANDU, 1000, 100), '\n')
+cat('average pValeur StandardMinimal : ', computeAvgPValeur(StandardMinimal, 1000, 100), '\n')
+cat('average pValeur MersenneTwister : ', computeAvgPValeur(MersenneTwister, 1000, 100), '\n')
+```
+
 ## Q4
 
 La fonction à implémenter est assez similaire à celle de la question précédente. 
@@ -244,10 +263,6 @@ runs <- function(x, nb) {
     for(j in 1:nbBitsToConsider) {
       # start by the bit of lowest weight, j in [1:32] or less
       bit0or1 <- seq32Bits[32+1 - j]
-      ## error with VonNeumann required fix
-      if(is.na(bit0or1)) {
-        bit0or1 <- 0
-      }
       ## pre-compute proportionOf1
       sumOf1 <- sumOf1 + bit0or1
       ## compute vObs
@@ -307,11 +322,11 @@ On a donc, avec la règle de décision à 1% :
 
 * pValeur moyenne (runs) RANDU > 0,01 donc RANDU est aléatoire au sens de ce test.
 
-* pValeur moyenne (runs) VonNeumann > 0,01 donc RANDU est aléatoire au sens de ce test.
+* pValeur moyenne (runs) VonNeumann > 0,01 donc VonNeumann est aléatoire au sens de ce test.
 
-* pValeur moyenne (runs) StandardMinimal < 0,01 donc StandardMinimal n'est pas un générateur de séquences aléatoires.
+* pValeur moyenne (runs) StandardMinimal < 0,01 donc StandardMinimal n'est pas un générateur de séquences aléatoires au sens de ce test.
 
-* pValeur moyenne (runs) MersenneTwister < 0,01 donc MersenneTwister n'est pas un générateur de séquences aléatoires.
+* pValeur moyenne (runs) MersenneTwister < 0,01 donc MersenneTwister n'est pas un générateur de séquences aléatoires au sens de ce test.
 
 ## Q5
 
@@ -358,4 +373,6 @@ On a donc, avec la règle de décision à 1% :
 * pValeur moyenne (runs) MersenneTwister > 0,01 donc MersenneTwister est aléatoire au sens de ce test.
 
 Nous venons de répondre à toutes les questions obligatoires de la partie 1.
+
+
 

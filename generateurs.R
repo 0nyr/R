@@ -113,11 +113,8 @@ Frequency <- function(x, nb) {
 
 ## get the number of bits to use to convert a decimal to binary
 bitsNecessary <- function(decimalNumber) {
-  nbBits <- 0
-  while(decimalNumber/2^nbBits > 1.0) {
-    nbBits <- nbBits + 1
-  }
-  return(nbBits)
+  if(decimalNumber == 0) return(1);
+  return(log2(decimalNumber) + 1);
 }
 
 ## compute the average pValeur of a generator
@@ -141,6 +138,9 @@ computeAvgPValeur <- function(generator, lengthSeq, repetition, maxSeed=10000000
     }
     ## determine the pValeur for the sequence x and sum it with the others
     sumPValeur <- sumPValeur + Frequency(x, nb)
+    if(is.na(Frequency(x, nb))) {
+      cat("x = ", x, ", nb = ", nb)
+    }
   }
   avgPValeur <- sumPValeur/repetition
   return(avgPValeur)
@@ -165,10 +165,6 @@ runs <- function(x, nb) {
     for(j in 1:nbBitsToConsider) {
       # start by the bit of lowest weight, j in [1:32] or less
       bit0or1 <- seq32Bits[32+1 - j]
-      ## error with VonNeumann required fix
-      if(is.na(bit0or1)) {
-        bit0or1 <- 0
-      }
       ## pre-compute proportionOf1
       sumOf1 <- sumOf1 + bit0or1
       ## compute vObs

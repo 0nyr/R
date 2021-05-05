@@ -76,6 +76,14 @@ for(i in 1:length(results)) {
   }
 }
 
+nbBitsForGivenSequence <- function(lengthSeq) {
+  nb = rep(0, lengthSeq)
+  for(j in 1:lengthSeq) {
+    nb[j] <- bitsNecessary(x[j])
+  }
+  return(nb)
+}
+
 ## results
 cat('average pValeur VonNeumann : ', computeAvgPValeur(VonNeumann, 1000, 100, 9999, FALSE), '\n')
 cat('average pValeur RANDU : ', computeAvgPValeur(RANDU, 1000, 100), '\n')
