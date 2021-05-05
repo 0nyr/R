@@ -6,25 +6,58 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# code qui sera exécuté mais qui n'aparaitra pas dans le compte rendu
+setwd("~/Documents/3if/S2/proba/proba/tp_R")
+library(randtoolbox)
+source('generateurs.R')
 ```
 
-## R Markdown
+# Compte rendu TP R
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Q1
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Créations des fonctions RANDU et StandardMinimal dans le fichier generateurs.R. On notera simplement que l'index de départ est 1 au lieu de 0. Les deux fonctions sont similaires, seuls certains coefficients changent.
 
-```{r cars}
-summary(cars)
+```{r}
+RANDU <- function(k, graine) {
+  x <-  rep(graine,k)
+  # start index 1 (not 0), end index k (not k-1)
+  # S0 (at index 1) is already initialized, start at S1 (idx 2)
+  for(i in seq(2,k,1)) {
+    x[i] <- as.numeric((65539*x[i-1]) %% (2^31))
+  }
+  return(x)
+}
+
+StandardMinimal <- function(k, graine) {
+  x <-  rep(graine,k)
+  for(i in seq(2,k,1)) {
+    x[i] <- as.numeric((16807*x[i-1]) %% (2^31 - 1))
+  }
+  return(x)
+}
 ```
 
-## Including Plots
+## Q2.1
 
-You can also embed plots, for example:
+Création d'histogrammes pour les différents générateurs.
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+# cut the window in 2 rows, 2 columns, graphs filled successively
+par(mfrow=c(2,2))
+## histogram of RANDU distribution for k=1000, seed=31
+hist(RANDU(1000, 31), main="RANDU")
+hist(StandardMinimal(1000, 31), main="StdMinimal")
+hist(VonNeumann(1000, graine = 31), main="VonNeumann")
+hist(MersenneTwister(1000, graine = 31), main="MersTwister")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+On constate que la répartition des valeurs aléatoire ne respecte pas parfaitement une loi uniforme. 
+En particulier, VonNeumann génère beaucoup de valeurs proches et parfois plus aucune selon l'intervalle. Ce générateur est donc assez peu satisfaisant. 
+StandardMinimal et Randu sont assez proches dans leur répartitions des valeurs, ce qui correspond au fait que ces générateurs sont très similaires.
+Enfin, MersenneTwister donne est le plus satisfaisant avec une meilleure répartitions des valeurs générées. L'écart entre les différentes colonnes de l'histogramme sont les plus faibles.
+
+
+
+
+

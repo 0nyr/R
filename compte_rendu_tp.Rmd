@@ -7,12 +7,16 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 # code qui sera exécuté mais qui n'aparaitra pas dans le compte rendu
-setwd("~/Documents/3A_IF/math/proba/tp_R")
+setwd("~/Documents/3if/S2/proba/proba/tp_R")
 library(randtoolbox)
 source('generateurs.R')
 ```
 
 # Compte rendu TP R
+
+# Remarques
+
+Nous avons choisi de créer une version de VonNeumann et MersenneTwister avec 2 paramètres puisque le paramètre p ne sert presque jamais. De puis, cela s'accorde avec les fonctions RANDU et StandardMinimal.
 
 ## Q1
 
@@ -59,7 +63,7 @@ Enfin, MersenneTwister donne est le plus satisfaisant avec une meilleure répart
 
 ## Q2.2
 
-On trace les valeurs obtenues en fonctions des valeurs précédantes pour chaque algorithme.
+On trace les valeurs obtenues en fonctions des valeurs précédentes pour chaque algorithme.
 
 ```{r}
 par(mfrow=c(2,2))
@@ -68,32 +72,60 @@ u1 <- RANDU(n, 31)
 u2 <- StandardMinimal(n, 31)
 u3 <- VonNeumann(n, 31)
 u4 <- MersenneTwister(n, 31)
-plot(u1[1:(n-1)], u1[2:n], xlab='val precedantes', ylab='val obtenues', main="RANDU")
-plot(u2[1:(n-1)], u2[2:n], xlab='val precedantes', ylab='val obtenues', main="StdMinimal")
-plot(u3[1:(n-1)], u3[2:n], xlab='val precedantes', ylab='val obtenues', main="VonNeumann")
-plot(u4[1:(n-1)], u4[2:n], xlab='val precedantes', ylab='val obtenues', main="MersTwister")
+plot(u1[1:(n-1)], u1[2:n], xlab='val precedentes', ylab='val obtenues', main="RANDU")
+plot(u2[1:(n-1)], u2[2:n], xlab='val precedentes', ylab='val obtenues', main="StdMinimal")
+plot(u3[1:(n-1)], u3[2:n], xlab='val precedentes', ylab='val obtenues', main="VonNeumann")
+plot(u4[1:(n-1)], u4[2:n], xlab='val precedentes', ylab='val obtenues', main="MersTwister")
 ```
 
-On remarque tout de suite pour VonNeumann que les toutes les valeurs sont regroupées en quelques points, ce qui indique que le générateur a tendance à toujours donner certaines valeurs. Il n'est pas très satisfaisant.
+On remarque tout de suite pour VonNeumann que les toutes les valeurs sont regroupées en quelques points, ce qui indique que le générateur a tendance à toujours donner les mêmes suites de valeurs. Il n'est pas très satisfaisant.
 Ensuite, RANDU et StandardMinimal donnent de meilleurs résultats, avec plus de points mieux répartient indiquant un générateur aléatoire de meilleur qualité. 
-Enfin, MersenneTwister donne le résultat le plus uniforme et réparti. La distinction entre les 3 derniers algorithmes est moins visible qu'avec un histogramme.
+Enfin, il semble que MersenneTwister donne le résultat le plus uniforme et réparti, cependant, la différence observée reste faible. La distinction entre les 3 derniers algorithmes est moins visible qu'avec un histogramme.
 
 ## Q3
 
-On crée la fonction Frequency, qui prend en entrée un vecteur x contenant une série de nombres issus de nos générateurs et pour lesquels une autre suite nb indique le nombre de bits à considérer. En effets, tous les nombres générés ne nécessitent pas forcément 32 bits pour être converti du décimal au binaire et on ne veut pas considérer les 0 en trop de la convertion renvoyée par la fonction binary. L'example ci-dessous montre ce phénomène de 0 en trop. Seuls les 0 après un bit 1 de poids le plus fort sont utiles.
+On crée la fonction Frequency, qui prend en entrée un vecteur x contenant une série de nombres issus de nos générateurs et pour lesquels une autre suite nb indique le nombre de bits à considérer. En effet, tous les nombres générés ne nécessitent pas forcément 32 bits pour être convertis du décimal au binaire et on ne veut pas considérer les 0 en trop de la convertion renvoyée par la fonction binary. L'exemple ci-dessous montre ce phénomène de 0 en trop. Seuls les 0 après un bit 1 de poids le plus fort sont utiles. Ainsi, chaque bit est utilisé moitié moins que le bit de poids faible précédent. Il faut donc bien considérer les bits réellements générés, et non pas tous les bits possiblement utilisés jusqu'à la borne supérieure.
 
 ```{r}
 cat(binary(2^31), '\n')
 cat(binary(12), '\n')
 ```
+L'implémentation de la fonction Frequency est assez directe. Son rôle est d'effectuer les opérations demandées, à savoir, le calcul de la somme des bits convertis (1 devient +1 et 0 devient -1), puis sObs et enfin pValeur.
 
-La fonction Frequency, renvoie la pValeur pour une série de nombres supposée aléatoire : 
+```{r}
+## x - observed vector of numbers, nb - number of bits to consider
+## WARN : starts by the bit of lowest weight !
+## WARN : test at least 100 bit 
+Frequency <- function(x, nb) {
+  sumConvertedBits <- 0
+  allConsideredBits <- 0
+  # convert all numbers into a sum of converted bits
+  for(i in 1:length(x)) {
+    seq32Bits <- binary(x[i])
+    nbBitsToConsider <- nb[i]
+    allConsideredBits <- allConsideredBits + nbBitsToConsider
+    for(j in 1:nbBitsToConsider) {
+      # conversion in +1 or -1 of a number's bits
+      # start by the bit of lowest weight, j in [1:32] or less
+      bit0or1 <- seq32Bits[32+1 - j]
+      sumConvertedBits <- sumConvertedBits + (2*bit0or1 - 1)
+    }
+  }
+  # computation of sObs of all numbers
+  sObs <- abs(sumConvertedBits)/sqrt(allConsideredBits)
+  # computation of pValeur of all numbers
+  pValeur <- 2*(1 - pnorm(sObs))
+  return(pValeur)
+}
+```
+
+La fonction Frequency renvoie donc la pValeur pour une série de nombres supposée aléatoire. On va maintenant l'utiliser afin de tester la qualité de nos générateurs aléatoires.  : 
 
 ```{r}
 ## compute the average pValeur of a generator
 ## specify the number of numbers generated for each sequence on which to compute a pValeur 
 ## specify how many time to repeat the test (how much pValeur to compute)
-computeAvgPValeur <- function(generator, lengthSeq, repetition, maxSeed=100000000, printSeeds=FALSE) {
+computeAvgPValeur <- function(generator, lengthSeq, repetition, maxSeed = 100000000, printSeeds = FALSE) {
   seeds <- sample.int(maxSeed,repetition)
   if(printSeeds) {
     cat('seeds : ', seeds, '\n')
@@ -104,7 +136,7 @@ computeAvgPValeur <- function(generator, lengthSeq, repetition, maxSeed=10000000
     ## generate a vector x of 1000 numbers by our generators
     x <- generator(lengthSeq, seeds[i])
     ## initialize nb, the vector of bits to consider for every number of x
-    nb <- rep(0,lengthSeq)
+    nb <- rep(0, lengthSeq)
     ## for every number of x, determine how many bits are to be considered
     for(j in 1:lengthSeq) {
       nb[j] <- bitsNecessary(x[j])
@@ -147,7 +179,7 @@ On remaque donc que d'après la règle de décision à 1%, que :
 
 * pValeur moyenne MersenneTwister < 0,01 donc MersenneTwister n'est pas un générateur de séquences aléatoires.
 
-Pour le dernier test VonNeumann, on obtiendra dans l'immense majorité du temps NA. Cependant on peut parvenir à obtenir des pValeurs. Dans ces cas, on aura pValeur < 0,01 et donc donc VonNeumann n'est pas un générateur de séquences aléatoires : 
+Pour le dernier test VonNeumann, on obtiendra dans l'immense majorité du temps NA. Cependant on peut parvenir à obtenir des pValeurs. Dans ces cas, on aura pValeur < 0,01 et donc donc VonNeumann n'est pas un générateur de séquences aléatoires au sens de ce test : 
 
 ```{r}
 for(i in 1:8) {
@@ -155,7 +187,7 @@ for(i in 1:8) {
 }
 ```
 
-En regardant de plus prêt, on se rend compte qu'en fonction de la seed choisie, on aura soit NA soit une pValeur numérique. En creusant la piste des seeds, on finit par réaliser qu'en certains cas, le nombre 0 est généré ce qui conduit la suite de la séquence à être des 0 !
+En regardant de plus près, on se rend compte qu'en fonction de la seed choisie, on aura soit NA soit une pValeur numérique. En creusant la piste des seeds, on finit par réaliser qu'en certains cas, le nombre 0 est généré ce qui conduit la suite de la séquence à être des 0 !
 
 ```{r eval=FALSE}
 cat(VonNeumann(100, 33), '\n')
