@@ -1,7 +1,7 @@
 # au prealable, vous devez executer l'instruction suivante
 # install.packages('randtoolbox')
 
-setwd("~/Documents/3A_IF/math/proba/tp_R")
+setwd("~/Documents/3if/S2/proba/proba/tp_R")
 library(randtoolbox)
 source('generateurs.R')
 
@@ -101,8 +101,11 @@ cat('average pValeur (runs) MersenneTwister : ', computeAvgPValeurRuns(MersenneT
 u <- RANDU(1000, 31)
 cat(order.test(u, d=4, echo=FALSE)$p.value)
 ## WARN Data != Values, v <- MersenneTwister(1000, 32) != v <- as.numeric(MersenneTwister(1000, 32))
+# Difference between Data and Value : https://stackoverflow.com/questions/38687880/difference-between-data-and-values-in-r 
 v <- as.numeric(MersenneTwister(1000, 32))
+v1 <- as.numeric(MersenneTwister(1000, 32))
 cat(order.test(v, d=4, echo=FALSE)$p.value)
+cat(order.test(v1, d=4, echo=FALSE)$p.value)
 
 ## results
 cat('average pValeur (order) VonNeumann : ', computeAvgPValeurOrder(VonNeumann, 1000, 100, 9999), '\n')

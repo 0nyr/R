@@ -7,7 +7,7 @@ RANDU <- function(k, graine) {
   # start index 1 (not 0), end index k (not k-1)
   # S0 (at index 1) is already initialized, start at S1 (idx 2)
   for(i in seq(2,k,1)) {
-    x[i] <- as.numeric((65539*x[i-1]) %% (2^31))
+    x[i] <- ((65539*x[i-1]) %% (2^31)) 
   }
   return(x)
 }
@@ -15,7 +15,7 @@ RANDU <- function(k, graine) {
 StandardMinimal <- function(k, graine) {
   x <-  rep(graine,k)
   for(i in seq(2,k,1)) {
-    x[i] <- as.numeric((16807*x[i-1]) %% (2^31 - 1))
+    x[i] <- ((16807*x[i-1]) %% (2^31 - 1)) 
   }
   return(x)
 }
@@ -45,7 +45,8 @@ VonNeumann <- function(n, graine)
     while(length(numbers)>4){ 
       numbers <- numbers[2:(length(numbers)-1)] 
     }
-    x[i] <- as.numeric(numbers)%*%(10^seq(length(numbers)-1,0,-1))
+    # NB: as.numeric converts numbers from string to double
+    x[i] <- as.numeric(numbers)%*%(10^seq(length(numbers)-1,0,-1)) 
   }
   x <- matrix(x[2:(n*p+1)],nrow=n,ncol=p)
   return(x)

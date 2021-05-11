@@ -22,13 +22,13 @@ Nous avons choisi de créer une version de VonNeumann et MersenneTwister avec 2 
 
 Créations des fonctions RANDU et StandardMinimal dans le fichier generateurs.R. On notera simplement que l'index de départ est 1 au lieu de 0. Les deux fonctions sont similaires, seuls certains coefficients changent.
 
-```{r}
+```{r eval=FALSE}
 RANDU <- function(k, graine) {
   x <-  rep(graine,k)
   # start index 1 (not 0), end index k (not k-1)
   # S0 (at index 1) is already initialized, start at S1 (idx 2)
   for(i in seq(2,k,1)) {
-    x[i] <- as.numeric((65539*x[i-1]) %% (2^31))
+    x[i] <- ((65539*x[i-1]) %% (2^31)) 
   }
   return(x)
 }
@@ -36,7 +36,7 @@ RANDU <- function(k, graine) {
 StandardMinimal <- function(k, graine) {
   x <-  rep(graine,k)
   for(i in seq(2,k,1)) {
-    x[i] <- as.numeric((16807*x[i-1]) %% (2^31 - 1))
+    x[i] <- ((16807*x[i-1]) %% (2^31 - 1)) 
   }
   return(x)
 }
@@ -107,7 +107,7 @@ Frequency <- function(x, nb) {
     for(j in 1:nbBitsToConsider) {
       # conversion in +1 or -1 of a number's bits
       # start by the bit of lowest weight, j in [1:32] or less
-      bit0or1 <- seq32Bits[32+1 - j]
+      bit0or1 <- seq32Bits[32+1 - j] # see bit order with cat(binary(12), '\n')
       sumConvertedBits <- sumConvertedBits + (2*bit0or1 - 1)
     }
   }
@@ -170,6 +170,10 @@ cat('average pValeur RANDU : ', computeAvgPValeur(RANDU, 1000, 100), '\n')
 cat('average pValeur StandardMinimal : ', computeAvgPValeur(StandardMinimal, 1000, 100), '\n')
 cat('average pValeur MersenneTwister : ', computeAvgPValeur(MersenneTwister, 1000, 100), '\n')
 ```
+average pValeur VonNeumann :  1.5e-07 
+average pValeur RANDU :  0.12 
+average pValeur StandardMinimal :  7.7e-05 
+average pValeur MersenneTwister :  7e-06 
 
 On remaque donc que d'après la règle de décision à 1%, que :
 
@@ -239,6 +243,12 @@ cat('average pValeur RANDU : ', computeAvgPValeur(RANDU, 1000, 100), '\n')
 cat('average pValeur StandardMinimal : ', computeAvgPValeur(StandardMinimal, 1000, 100), '\n')
 cat('average pValeur MersenneTwister : ', computeAvgPValeur(MersenneTwister, 1000, 100), '\n')
 ```
+average pValeur VonNeumann :  1.2e-07 
+average pValeur RANDU :  0.054 
+average pValeur StandardMinimal :  1.8e-06 
+average pValeur MersenneTwister :  8e-06 
+
+
 
 ## Q4
 
@@ -262,7 +272,7 @@ runs <- function(x, nb) {
     allConsideredBits <- allConsideredBits + nbBitsToConsider
     for(j in 1:nbBitsToConsider) {
       # start by the bit of lowest weight, j in [1:32] or less
-      bit0or1 <- seq32Bits[32+1 - j]
+      bit0or1 <- seq32Bits[32+1 - j] # see bit order with cat(binary(12), '\n')
       ## pre-compute proportionOf1
       sumOf1 <- sumOf1 + bit0or1
       ## compute vObs
@@ -317,16 +327,20 @@ cat('average pValeur (runs) RANDU : ', computeAvgPValeurRuns(RANDU, 1000, 100), 
 cat('average pValeur (runs) StandardMinimal : ', computeAvgPValeurRuns(StandardMinimal, 1000, 100), '\n')
 cat('average pValeur (runs) MersenneTwister : ', computeAvgPValeurRuns(MersenneTwister, 1000, 100), '\n')
 ```
+average pValeur (runs) VonNeumann :  0 
+average pValeur (runs) RANDU :  0.024 
+average pValeur (runs) StandardMinimal :  0.042 
+average pValeur (runs) MersenneTwister :  0.032 
 
 On a donc, avec la règle de décision à 1% : 
 
-* pValeur moyenne (runs) RANDU > 0,01 donc RANDU est aléatoire au sens de ce test.
+* pValeur moyenne (runs) RANDU > 0,01 donc RANDU est aléatoire au sens de ce test (même si ça reste souvent assez proche de 0,01).
 
-* pValeur moyenne (runs) VonNeumann > 0,01 donc VonNeumann est aléatoire au sens de ce test.
+* pValeur moyenne (runs) VonNeumann < 0,01 donc VonNeumann n'est pas un générateur de séquences aléatoires au sens de ce test.
 
-* pValeur moyenne (runs) StandardMinimal < 0,01 donc StandardMinimal n'est pas un générateur de séquences aléatoires au sens de ce test.
+* pValeur moyenne (runs) StandardMinimal > 0,01 donc StandardMinimal est aléatoire au sens de ce test.
 
-* pValeur moyenne (runs) MersenneTwister < 0,01 donc MersenneTwister n'est pas un générateur de séquences aléatoires au sens de ce test.
+* pValeur moyenne (runs) MersenneTwister < 0,01 donc MersenneTwister est aléatoire au sens de ce test.
 
 ## Q5
 
@@ -345,7 +359,7 @@ computeAvgPValeurOrder <- function(generator, lengthSeq, repetition, maxSeed=100
   seeds <- sample.int(maxSeed,repetition)
   sumPValeur <- 0
   for (i in 1:repetition) {
-    u <- as.numeric(generator(lengthSeq, seeds[i]))
+    u <- as.numeric(generator(lengthSeq, seeds[i])) # TODO: understand why as.numeric, does transposition (row to column)
     sumPValeur <- sumPValeur + order.test(u, d=4, echo=FALSE)$p.value
   }
   avgPValeur <- sumPValeur/repetition
