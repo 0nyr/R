@@ -254,6 +254,7 @@ cat('average pValeur MersenneTwister : ', computeAvgPValeur(MersenneTwister, 100
 
 ---
 
+
 ## Q4 - Test des runs
 
 La fonction à implémenter est assez similaire à celle de la question précédente. 
