@@ -5,6 +5,10 @@ setwd("~/Documents/3if/S2/proba/proba/tp_R")
 library(randtoolbox)
 source('generateurs.R')
 
+# compile .Rmd to .pdf
+install.packages('tinytex')
+tinytex::install_tinytex()
+
 # Q1 - creation of RANDU and StandardMinimal
 ## cast 10 values starting with the number 31 as seed
 cat(RANDU(10, 31))

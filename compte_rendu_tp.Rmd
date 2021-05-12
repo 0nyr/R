@@ -250,6 +250,7 @@ average pValeur MersenneTwister :  8e-06
 
 
 
+
 ## Q4
 
 La fonction à implémenter est assez similaire à celle de la question précédente. 
