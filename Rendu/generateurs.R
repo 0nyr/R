@@ -222,5 +222,3 @@ computeAvgPValeurOrder <- function(generator, lengthSeq, repetition, maxSeed=100
   avgPValeur <- sumPValeur/repetition
   return(avgPValeur)
 }
-
-
