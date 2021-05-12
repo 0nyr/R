@@ -180,7 +180,10 @@ runs <- function(x, nb) {
     return(0.0)
   }
   ## compute pValeur
-  pValeur = 2*(1 - pnorm((abs(vObs - 2*allConsideredBits*proportionOf1*(1 - proportionOf1)))/(2*sqrt(allConsideredBits)*proportionOf1*(1 - proportionOf1))))
+  a = abs(vObs - 2*allConsideredBits*proportionOf1*(1 - proportionOf1))
+  b = 2*sqrt(allConsideredBits)*proportionOf1*(1 - proportionOf1)
+  
+  pValeur = 2*(1 - pnorm(a/b))
   return(pValeur)
 }
 
