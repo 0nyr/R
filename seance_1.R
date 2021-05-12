@@ -174,6 +174,8 @@ for(i in c(6, 10, 11, 15)) {
   attente_moy <- CalculAttenteMoyenne(file$arrivees, file$departs)
   cat("Pour lambda =", i, ": moyenne des personnes =", moy_pers, ", attente moyenne =", attente_moy, "\n")
   
+  
+  # TODO
   alpha = mu / lambda
   En = alpha / (1 - alpha)
   lEw = attente_moy * lambda
