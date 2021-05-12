@@ -12,6 +12,10 @@ library(randtoolbox)
 source('generateurs.R')
 ```
 
+# Introduction
+
+Ce document présente nos résultats aux parties demandés du TP de probabilités en R. Nous avons essayé d'expliquer notre code au maximum afin de lever les ambiguïtés. De même, nous avons parfois choisi de conserver dans le rapport des erreurs commises ainsi que d'expliquer celles-ci.
+
 # Remarques
 
 Nous avons choisi de créer une version de VonNeumann et MersenneTwister avec 2 paramètres puisque le paramètre *p* ne sert presque jamais. De plus, cela s'accorde avec les fonctions RANDU et StandardMinimal.
@@ -83,7 +87,7 @@ Enfin, il semble que MersenneTwister donne le résultat le plus uniforme et rép
 
 ## Q3 - Test de fréquence monobit
 
-On crée la fonction `Frequency`, qui prend en entrée un vecteur *x* contenant une série de nombres issus de nos générateurs et pour lesquels une autre suite *nb* indique le nombre de bits à considérer. En effet, tous les nombres générés ne nécessitent pas forcément 32 bits pour être convertis du décimal au binaire et on ne veut pas considérer les 0 en trop de la conversion renvoyée par la fonction `binary`. L'exemple ci-dessous montre ce phénomène de 0 en trop. Seuls les 0 après un bit 1 de poids le plus fort sont utiles. Il faut donc bien considérer les bits réellements générés, et non pas tous les bits possiblement utilisés jusqu'à la borne supérieure (tout comme des 0 précédant un nombre en décimal : pour 0000035 on ne voudrait pas comptabiliser les zéros de tête).
+On crée la fonction `Frequency`, qui prend en entrée un vecteur *x* contenant une série de nombres issus de nos générateurs et pour lesquels une autre suite *nb* indique le nombre de bits à considérer. En effet, tous les nombres générés ne nécessitent pas forcément 32 bits pour être convertis du décimal au binaire et on ne veut pas considérer les 0 en trop de la conversion renvoyée par la fonction `binary`. L'exemple ci-dessous montre ce phénomène de 0 en trop. Seuls les 0 après un bit 1 de poids le plus fort sont utiles. Il faut donc bien considérer les bits réellements générés, et non pas tous les bits possiblement utilisés jusqu'à la borne supérieure. Une analogie en décimal serait, par exemple, pour le nombre généré 0000035 de ne pas comptabiliser les zéros de tête.
 
 ```{r}
 cat(binary(2^31), '\n')
@@ -362,7 +366,7 @@ v <- as.numeric(MersenneTwister(1000, 32))
 cat(order.test(v, d=4, echo=FALSE)$p.value)
 ```
 
-On n'a plus qu'à réitérer le test 100 fois pour chaque générateur afin de calculer la *pValeur* moyenne du test. Pour cela on utilise la fonction suivante. Ici, le `as.numeric` est essentiel car les générateurs renvoient des listes dont chaque élément est une liste à un seul élément. Le `as.numeric` permet "d'unpack" ces listes en un vecteur simple.
+On n'a plus qu'à réitérer le test 100 fois pour chaque générateur afin de calculer la *pValeur* moyenne du test. Pour cela on utilise la fonction suivante. Ici, le `as.numeric` est essentiel car les générateurs renvoient des listes dont chaque élément est une liste à un seul élément. Le `as.numeric` permet "d'unpack" ces listes en un vecteur simple. Ainsi, il n'est pas  nécessaire d'utiliser la fonction de transposition.
 
 ```{r}
 computeAvgPValeurOrder <- function(generator, lengthSeq, repetition, maxSeed=100000000) {
@@ -392,9 +396,9 @@ cat('average pValeur (order) MersenneTwister : ',
 
 On a donc, avec la règle de décision à 1% : 
 
-* *pValeur* moyenne (order test) RANDU > 0,01 donc RANDU est aléatoire au sens de ce test.
-
 * *pValeur* moyenne (order test) VonNeumann < 0,01 donc VonNeumann n'est pas un générateur de séquences aléatoires.
+
+* *pValeur* moyenne (order test) RANDU > 0,01 donc RANDU est aléatoire au sens de ce test.
 
 * *pValeur* moyenne (order test) StandardMinimal > 0,01 donc StandardMinimal est aléatoire au sens de ce test.
 
