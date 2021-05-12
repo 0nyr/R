@@ -487,11 +487,21 @@ On répète ensuite l'expérience avec lambda = 10, puis 11, et enfin 15 :
 for(i in c(10, 11, 15)) {
   file <- FileMM1(lambda = i/60, mu = 11/60, D = 12*60)
   nb_pers <- VisualisationComportement(file$arrivees, file$departs)
-  plot(nb_pers$t, nb_pers$n, xlab="Temps", ylab="Nombre de personnes", type="s", title=paste("Pour lambda = ", i))
+  plot(nb_pers$t, nb_pers$n, xlab="Temps", ylab="Nombre de personnes", type="s")
+  title=
+  title(main = paste("Graphique pour lambda = ", i))
 }
 ```
 
-# Q8 - Estimations 
+# Q8 - Estimations
+
+On cherche à vérifier la loi de Little. Pour cela, on va calculer de façon indépendante le terme de droite et de gauche de l'égalité et constater si elle est vérifiée ou non.
+
+Loi de Little : E(N) = lambda*E(W), où :
+
+* terme_gauche = E(N) = alpha/(1 - alpha)
+
+* terme_droite = lambda*E(W) = somme des temps passés dans la file pour chaque client divisé par le nombre de clients
 
 ```{r}
 CalculNombreMoyenPersonnes <- function(valeursN) {
@@ -506,18 +516,47 @@ CalculAttenteMoyenne <- function(arrivees, departs) {
   }
   return(mean(attentes))
 }
+
+SommeTempsPasseFile <- function(arrivees, departs) {
+  somme_attentes = 0
+  for(i in 1:length(departs))
+  {
+    somme_attentes = somme_attentes + (departs[i] - arrivees[i])
+  }
+  return(somme_attentes)
+}
 ```
+
+On effectue les calculs demandé pour différentes valeurs de lambda et mu et on calcul à chaque fois la valeur du terme de droite et gauche de l'égalité de Little.
 
 ```{r}
 for(i in c(6, 10, 11, 15)) {
-  file <- FileMM1(lambda = i/60, mu = 11/60, D = 12*60)
+  lambda <- i/60
+  mu <- 11/60
+  
+  file <- FileMM1(lambda, mu, D = 12*60)
   nb_pers <- VisualisationComportement(file$arrivees, file$departs)
   
   moy_pers <- CalculNombreMoyenPersonnes(nb_pers$n)
   attente_moy <- CalculAttenteMoyenne(file$arrivees, file$departs)
-  cat("Pour lambda =", i, ": moyenne des personnes =", moy_pers, ", attente moyenne =", attente_moy, "\n")
+  
+  # calcul terme de gauche
+  alpha = lambda / mu
+  terme_gauche <- alpha / (1 - alpha)
+  
+  # calcul terme de droite
+  nb_clients <- length(file$arrivees)
+  terme_droite <- SommeTempsPasseFile(file$arrivees, file$departs) / nb_clients
+  
+  cat("Pour lambda =", i, ": moyenne des personnes =", moy_pers, ", attente moyenne =", attente_moy, "\n", "Terme gauche =", terme_gauche, "Terme droite =", terme_droite)
 }
 ```
+
+TODO : constatation sur l'égalité terme_droite, terme_gauche.
+
+
+
+
 
 
 
