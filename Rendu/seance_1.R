@@ -4,6 +4,7 @@
 setwd("~/Documents/3if/S2/proba/proba/tp_R")
 library(randtoolbox)
 source('generateurs.R')
+source('files.R')
 
 # compile .Rmd to .pdf
 install.packages('tinytex')
@@ -140,4 +141,46 @@ plot(vn[1:(Nsimu-1),1],vn[2:Nsimu,1],xlab='VN(i)', ylab='VN(i+1)', main='Von Neu
 
 # Sequence de bits pour les tests
 (bit_mt <- binary(mt[1,1]))
+
+
+############################################################
+##  Section 3
+############################################################
+
+# Q6-7
+
+files_attente <- FileMM1(lambda = 6/60, mu = 11/60, D = 12*60)
+
+nb_personnes_temps <- VisualisationComportement(files_attente$arrivees, files_attente$departs)
+
+plot(nb_personnes_temps$t, nb_personnes_temps$n, xlab="Temps", ylab="Nombre de personnes", type="s")
+
+
+for(i in c(10, 11, 15)) {
+  file <- FileMM1(lambda = i/60, mu = 11/60, D = 12*60)
+  nb_pers <- VisualisationComportement(file$arrivees, file$departs)
+  plot(nb_pers$t, nb_pers$n, xlab="Temps", ylab="Nombre de personnes", type="s")
+}
+
+# Q8
+for(i in c(6, 10, 11, 15)) {
+  lambda = i / 60
+  mu = 11 / 60
+  
+  file <- FileMM1(lambda = lambda, mu = mu, D = 12*60)
+  nb_pers <- VisualisationComportement(file$arrivees, file$departs)
+  
+  moy_pers <- CalculNombreMoyenPersonnes(nb_pers$n)
+  attente_moy <- CalculAttenteMoyenne(file$arrivees, file$departs)
+  cat("Pour lambda =", i, ": moyenne des personnes =", moy_pers, ", attente moyenne =", attente_moy, "\n")
+  
+  
+  # TODO
+  alpha = mu / lambda
+  En = alpha / (1 - alpha)
+  lEw = attente_moy * lambda
+  
+  cat("E(N) =", En, " et lamba*E(W) =", lEw, "\n")
+}
+
 

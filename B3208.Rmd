@@ -499,9 +499,9 @@ On cherche à vérifier la loi de Little. Pour cela, on va calculer de façon in
 
 Loi de Little : E(N) = lambda*E(W), où :
 
-* terme_gauche = E(N) = alpha/(1 - alpha)
+* terme_gauche = E(N) = espérance de N (nombre de clients dans la système)
 
-* terme_droite = lambda*E(W) = somme des temps passés dans la file pour chaque client divisé par le nombre de clients
+* terme_droite = lambda*E(W) = lambda * espérance de W, le temps durant lequel un client reste dans le système = somme des temps passés dans la file pour chaque client divisé par le nombre de clients, multiplié par lambda 
 
 ```{r}
 CalculNombreMoyenPersonnes <- function(valeursN) {
@@ -533,6 +533,7 @@ On effectue les calculs demandé pour différentes valeurs de lambda et mu et on
 for(i in c(6, 10, 11, 15)) {
   lambda <- i/60
   mu <- 11/60
+  alpha <- lambda / mu
   
   file <- FileMM1(lambda, mu, D = 12*60)
   nb_pers <- VisualisationComportement(file$arrivees, file$departs)
@@ -540,20 +541,13 @@ for(i in c(6, 10, 11, 15)) {
   moy_pers <- CalculNombreMoyenPersonnes(nb_pers$n)
   attente_moy <- CalculAttenteMoyenne(file$arrivees, file$departs)
   
-  # calcul terme de gauche
-  alpha = lambda / mu
-  terme_gauche <- alpha / (1 - alpha)
-  
   # calcul terme de droite
-  nb_clients <- length(file$arrivees)
-  terme_droite <- SommeTempsPasseFile(file$arrivees, file$departs) / nb_clients
+  terme_droite <- attente_moy*lambda
   
-  cat("Pour lambda =", i, ": moyenne des personnes =", moy_pers, ", attente moyenne =", attente_moy, "\n", "Terme gauche =", terme_gauche, "Terme droite =", terme_droite)
+  cat("Pour lambda =", i, "alpha =", alpha, ": moyenne des personnes =", moy_pers, ", attente moyenne =", attente_moy, "\n",  "Terme droite =", terme_droite, "\n")
 }
 ```
-
-TODO : constatation sur l'égalité terme_droite, terme_gauche.
-
+On remarque très bien que quand alpha <= 1, on a des valeurs de "moyenne des personnes" (terme de gauche) très proches de celles de "Terme droite". Ainsi, dans ces cas, on se trouve donc dans le cas de systèmes dit stabilisés, pour lesquels la formule de Little est bien vérifié. En revanche, dans le cas où alpha > 1, le système n'est plus stabilisé et la formule de Little n'est plus vérifiée.
 
 
 

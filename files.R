@@ -65,3 +65,23 @@ CalculAttenteMoyenne <- function(arrivees, departs) {
   }
   return(mean(attentes))
 }
+
+NombreClientsAttendantAuDepart <- function(arrivees, departs) {
+  attente = c()
+  clients_attendant = c()
+  for(i in 1:length(departs))
+  {
+    attente[i] = departs[i] - arrivees[i]
+    nb_clients_attendant = 0
+    for(j in 1:i) {
+      if(j < length(departs) && departs[j] > departs[i] ) {
+        nb_clients_attendant = nb_clients_attendant + 1
+      }
+    }
+  }
+  
+  return(list(attente=attente, nb_clients=nb_clients_attendant))
+}
+
+
+
