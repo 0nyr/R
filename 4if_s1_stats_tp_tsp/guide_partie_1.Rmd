@@ -1,0 +1,87 @@
+---
+title: "Partie 1 - Guide R"
+author: "Irene Gannaz"
+date: "26 février 2020"
+output: pdf_document
+---
+
+# Manipulation de vecteurs
+
+* Les indices en R commencent à 1.
+
+* Si x est un vecteur on accède à l'élement i par x[i].
+
+ Si A est une matrice, on accèdes à la ligne i par A[i,], à la colonne j par A[,j] et à l'élément (i,j) par A[i,j].
+
+* Pour créer de vecteurs ou de matrices :
+```{r}
+x <- c()            # crée un vecteur vide
+x <- rep(0,10)      # crée un vecteur de 0 de taille 10
+A <- matrix(0,10,5) # crée une matrice de 0 de 10 lignes et 5 colonnes
+```
+ 
+ * La fonction rep (ceci peut être utile pour l'application de pairwise.t.test) :
+ 
+```{r}
+x <- rep(c(0,1),times=5)      # répète (0,1) 5 fois
+x
+y <- rep(c(0,1),each=5)       # répète chaque élément de (0,1) 5 fois successivement
+y
+t <- rep(c(0,1),length.out=5) # répète (0,1) jusqu'à ce que le vecteur soit de taille 5
+t
+t <- rep(c(0,1),5)            # si on ne précise pas, c'est times par défaut
+t
+```
+
+ * Pour passer de vecteurs à des matrices et inversement 
+```{r}
+# Transformer des vecteurs lignes en vecteurs colonnes
+x <- t(x)
+```
+```{r}
+# Concaténer des vecteurs en une matrice - verticalement
+x <- rep(0,5)
+y <- rep(1,5)
+A <- cbind(x,y)
+A
+```
+```{r}
+# Concaténer des vecteurs colonnes en un vecteur - horizontalement
+x <- rep(0,5)
+y <- rep(1,5)
+A <- rbind(x,y)
+A
+```
+
+```{r}
+# Transformer une matrice en un vecteur
+A <- cbind(rep(0,5),rep(1,5))
+x <- as.vector(A)
+cat(x)
+```
+
+ * Pour atribuer des noms aux lignes ou colonnes (utile notamment dans les graphiques - boxplots ici)
+
+```{r}
+A <- cbind(rep(0,5),rep(1,5))
+colnames(A) <- c('prems','deuz')
+rownames(A) <- letters[1:5]
+A
+```
+
+
+# Boxplots
+
+Si on fournit une matrice à la fonction boxplot, elle trace côte à côte les boxplots de chaque colonne, avec en abscisse les noms des colonnes.
+
+```{r}
+x1 <- rnorm(1000,0,1)
+x2 <- rnorm(1000,3,1)
+x3 <- rnorm(1000,3,2)
+x4 <- rt(1000,10)
+x5 <- rchisq(1000,1)
+A <- cbind(x1,x2,x3,x4,x5)
+colnames(A) <- c('N(0,1)','N(3,1)','N(3,4)','St(10)','Chi2(1)')
+boxplot(A)
+````
+```

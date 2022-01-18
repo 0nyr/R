@@ -1,3 +1,6 @@
 .Rproj.user/
 .RData
 .Rhistory
+
+# auxiliary files
+.log
