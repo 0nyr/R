@@ -3,4 +3,4 @@
 .Rhistory
 
 # auxiliary files
-.log
+*.log
