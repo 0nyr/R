@@ -1,7 +1,7 @@
 ---
-title: "tp_r_compte_rendu"
+title: "TP R - Etude de modélisations autour du Problème du Problème du Voyageur de Commerve (TSP)"
 author: "Florian Rascoussier"
-date: "1/12/2022"
+date: "11-19/01/2022"
 output: pdf_document
 ---
 
@@ -28,7 +28,14 @@ library(TSPpackage)
 # set la seed
 set.seed(0)
 ```
-Voici le plan de ce qui sera fait dans le TP.
+
+Les objectif de ce TP sont les suivants:
+  * Proposer une visualisation pour comparer des algorithmes,
+  * Mettre en oeuvre des procédures de tests statistiques.
+  * Introduire la notion de tests multiples.
+  * Ajuster un modèle de régression linéaire.
+  * Analyser un problème de régression (validité de l'ajustement et des hypothèses).
+  * Réaliser une sélection de variable (méthode AIC).
 
 # 0. Visualisation de chemins
 
@@ -38,7 +45,9 @@ Lecture du fichier des villes :
 
 ```{r, echo=TRUE}
 # DonneesGPSvilles.csv contient les coordonnées GPS de 22 villes françaises
-villes <- read.csv('~/Documents/4if/s1/stats/tp_tsp/data/DonneesGPSvilles.csv',header=TRUE,dec='.',sep=';',quote="\"")
+villes <- read.csv(
+  '/home/onyr/Documents/code/R/4if_s1_stats_tp_tsp/data/DonneesGPSvilles.csv',
+  header=TRUE,dec='.',sep=';',quote="\"")
 str(villes)
 ```
 Représentation des chemins par plus proches voisins et du chemin optimal :
@@ -69,7 +78,6 @@ TSPsolve(dist, "branch")
 ```
 
 Ceci illustre bien l'intérêt d'un algorithme de voyageur de commerce. Nous allons dans la suite étudier les performances de cet algorithme.
- longueurs de di
 
 # 1. Comparaison d'algorithmes
 
@@ -80,7 +88,10 @@ Nombre de sommets fixes et graphes "identiques".
 ```{r, echo=TRUE}
 # generate a new graph couts
       n <- 10
-sommets <- data.frame(x = runif(n), y = runif(n)) # runif - get n points distributed along uniform law
+sommets <- data.frame(
+  x = runif(n), 
+  y = runif(n) # runif - get n points distributed along uniform law
+)
   couts <- distance(sommets)
 ```
 
@@ -107,7 +118,7 @@ for(i in 1:50) {
   
   # generate a new graph
   n <- 10
-  sommets <- data.frame(x = runif(n), y = runif(n)) # runif - get n points distributed along uniform law
+  sommets <- data.frame(x = runif(n), y = runif(n))
   couts <- distance(sommets) # the new graph
   
   # compute
@@ -119,25 +130,39 @@ for(i in 1:50) {
 
 boxplot(compare_methods)
 ```
+
 Les boxplots nous indiquent que "branch" est le meilleur (on le savait), car les durées de transport sont les plus courtes. On peut se demander si "repetitive_nn" et "branch" sont similaires ou non. 
 
    * test entre 'nearest' et 'branch'
    
 ```{r, echo=TRUE}
 # H1 avec > -> alternative = greater
-pairwise.t.test(cbind(compare_methods[,"nearest"],compare_methods[,"branch"]), cbind(methods_used_for_each_value[,"nearest"],methods_used_for_each_value[,"branch"]), alternative = "greater", p.adjust.method = "bonferroni", paired = TRUE)
+pairwise.t.test(
+  cbind(compare_methods[,"nearest"],compare_methods[,"branch"]),
+  cbind(methods_used_for_each_value[,"nearest"],
+  methods_used_for_each_value[,"branch"]), 
+  alternative = "greater", 
+  p.adjust.method = "bonferroni", 
+  paired = TRUE
+)
 ```
 
    * tests 2 à 2
    
 ```{r, echo=TRUE}
 # H1 avec > -> alternative = greater
-pairwise.t.test(compare_methods, methods_used_for_each_value, alternative = "greater", p.adjust.method = "bonferroni", paired = TRUE)
+pairwise.t.test(
+  compare_methods, 
+  methods_used_for_each_value, 
+  alternative = "greater", 
+  p.adjust.method = "bonferroni", 
+  paired = TRUE
+)
 ```
 Quand la p-valeur est petite, on peut conclure que (H0) est fausse donc que (H1) est vrai. Ici, rappel :
 
-(H0) : moyenne method 1 == moyenne methode 2
-(H1) : moyenne method 1 != moyenne methode 2
+  * (H0) : moyenne method 1 == moyenne methode 2
+  * (H1) : moyenne method 1 != moyenne methode 2
 
 Donc ici, on peut déduire que "branch" a une moyenne différente des autres, de même entre "two_opt" et "repetitive_nn". Pour le reste, on ne peut rien dire.
 
@@ -150,7 +175,11 @@ Comparaison des temps à l'aide du package microbenchmark.
 Exemple d'application de microbenchmark :
 ```{r, echo=TRUE}
 microbenchmark(
-  TSPsolve(couts, "repetitive_nn"), TSPsolve(couts, "nearest_insertion"), TSPsolve(couts, "two_opt"), TSPsolve(couts, "nearest"), TSPsolve(couts, "branch"), 
+  TSPsolve(couts, "repetitive_nn"), 
+  TSPsolve(couts, "nearest_insertion"), 
+  TSPsolve(couts, "two_opt"), 
+  TSPsolve(couts, "nearest"), 
+  TSPsolve(couts, "branch"), 
   times=20, 
   setup={
     n <- 10
@@ -159,7 +188,7 @@ microbenchmark(
   }
 )
 ```
-"nearest" is the fastest algorithm.
+On déduit que "nearest" est l'algorithme le plus rapide.
 
 # 2. Etude de la complexité de l'algorithme Branch and Bound
 
@@ -190,7 +219,9 @@ compute_time_per_n <- function(n) {
     )$time
   )
 }
-temps <- t(apply(X = as.array(seqn), MARGIN = 1, FUN = compute_time_per_n)) # t() transpose
+temps <- t( # t() transpose
+  apply(X = as.array(seqn), MARGIN = 1, FUN = compute_time_per_n)
+) 
 ```
 
 Représentation graphique de $temps$ en fonction de $n$ puis de sa régression linéaire $log(temps)^2$ en fonction de $n$ :
@@ -211,67 +242,59 @@ summary(temps.lm)
 ```
 On obtient un résumé des résultats du calcul des résidus. 
 
-• *Intercept* = constante
-• *Estimate* = valeurs des coefficients correspondant à chaque variable
-• *Pr(>|t|)* = p-valeur du test (H0) coefficient=0 contre (H1) coefficient 6 = 0. ‘t’ car c’est un test de Student. Les * dans la marge servent à repérer les valeurs significatives
-• Residual standard error = le σ̂ du cours
-· −y · k
-• Multiple R-squared = le R 2 du cours en dimension 2, En plus grande dimension, R 2 = kŷ
-ky · −y · k est
-le ratio entre la variance expliquée par le modèle et la variance des données : si le ratio est proche de 1
-cela signifie que les observations s’éloignent peu du modèle.
-• F-statistic = test de Fisher de pertinence du modèle. Un modèle pertinent est un modèle tel que
-R 2 N −K
-R 2 est significativement supérieur à 0. F = 1−R
-2 K−1 avec K le nombre de variables dans le modèle
-(hors constante). La p-valeur donne la probabilité de se tromper si on affirme que le modèle n’est pas
-pertinent.
+  * *Intercept* = constante
+  * *Estimate* = valeurs des coefficients correspondant à chaque variable
+  * *Pr(>|t|)* = p-valeur du test (H0) coefficient=0 contre (H1) coefficient 6 = 0. ‘t’ car c’est un test de Student. Les * dans la marge servent à repérer les valeurs significatives
+  * *Residual standard error* = le sigma châpeau du cours
+  * *Multiple R-squared* = le R^2 du cours en dimension 2, En plus grande dimension, R^2 est le ratio entre la variance expliquée par le modèle et la variance des données : si le ratio est proche de 1, cela signifie que les observations s’éloignent peu du modèle.
+  * *F-statistic* = test de Fisher de pertinence du modèle. Un modèle pertinent est un modèle tel que R^2 est significativement supérieur à 0. F = ((R^2)/(1-(R^2)))*((N-K)/(K-1)) avec K le nombre de variables dans le modèle (hors constante). La p-valeur donne la probabilité de se trompe si on affirme que le modèle n’est pas pertinent.
+  
 S’il n’y a qu’une seule variable dans le modèle, tester (H0) coefficient=0 contre (H1) coefficient 6 = 0 ou faire
 le test de pertinence global de Fisher sont parfaitement équivalents.
 
-plus la p-valeur est faible, plus le coef sert à quelque chose pour l'influence sur la "fitness" du modèle. 
+plus la p-valeur (indiquée par `Pr(>|t|)`) est faible, plus le coef sert à quelque chose pour l'influence sur la "fitness" du modèle. 
 
 Ici, p-value: < 2.2e-16 la p-valeur du modèle. Donc ici un seul paramètre suffit largement.
 
 
 
 Il faut vérifier les hypothèses sur les résidus. Il y en a 4 :
-• loi normale
-• espérance nulle
-• variance constante
-• indépendance
+  * loi normale
+  * espérance nulle
+  * variance constante
+  * indépendance
 
 Si l’une de ces hypothèse est remise en cause, alors le modèle n’est plus valable (aucun des tests ci-dessus n’est valable et l’ajustement pas les moindres carrés est également discutable).
 
 L’étude de ces hypothèses se fait par
-• une étude graphique
-• des tests
+  * une étude graphique
+  * des tests
 
-Etude graphique
+Etude graphique :
+
 ```{r, echo=TRUE}
 par(mflow=c(2,2)) # 4 graphiques
 plot(temps.lm)
 ```
+
 *comment interpréter les résultats des graphiques ?*
 
-• **Residuals vs Fitted** :
-– Si on observe une tendance trop marquée des points sur le graphique, cela signifie que l’espérance des résidus n’est pas nulle, mais qu’elle est positive sur certaines sections et négatives sur d’autres. Ce problème peut souvent être corrigé avec un changement de variable. On reste assez “tolérant”
-sur les tendances et il faut qu’elles soient marquées pour rejeter le modèle.
+  * **Residuals vs Fitted** : Si on observe une tendance trop marquée des points sur le graphique, cela signifie que l’espérance des résidus n’est pas nulle, mais qu’elle est positive sur certaines sections et négatives sur d’autres. Ce problème peut souvent être corrigé avec un changement de variable. On reste assez “tolérant” sur les tendances et il faut qu’elles soient marquées pour rejeter le modèle.
 
 – Si on observe que le nuage de point s’écarte (forme de trompette) la variance des résidus n’est pas constante. On dit que les résidus sont hétéroscédastiques.
 
 Ici, même si les points ne semble pas former une droite mais plutôt une parabole, on peut quand même se dire que les observations graphiques ne permettent pas de rejeter le modèle. C'est encore suffisament plat. L'espérance des résidus est nulle.
 
-• **Normal Q-Q** : Compare la distribution des résidus à une loi normale. En abscisse, les quantiles empiriques des résidus et en ordonnée les quantiles de la loi normale, avec estimation des paramètres sur les résidus. Si les distribution sont identiques ou presque alors l’ensemble des points sont sur la diagonale. Sinon on observera la plupart du temps des deviation aux extremité ce qui sous-entend que les queues de distribution sont différentes.
+  * **Normal Q-Q** : Compare la distribution des résidus à une loi normale. En abscisse, les quantiles empiriques des résidus et en ordonnée les quantiles de la loi normale, avec estimation des paramètres sur les résidus. Si les distribution sont identiques ou presque alors l’ensemble des points sont sur la diagonale. Sinon on observera la plupart du temps des deviation aux extremité ce qui sous-entend que les queues de distribution sont différentes.
 
 Ici, les points suivent relativement bien la droite donc pareil, c'est bien aussi.
 
-• **Scale location** : Idem que Residuals vs Fitted mais avec des résidus normalisés.
+  * **Scale location** : Idem que Residuals vs Fitted mais avec des résidus normalisés.
 
 Ici la droite est suffisament plate. Les résidus sont possiblement nuls.
 
 
-• **Residuals vs Leverage** : Montre l’influence des echantillons (plus un point est à droite et plus il en a). Si un point est un outliers il apparaitra trés éloigné des autres et en dehors des bornes par rapport à la distance de Cook. Ces bornes sont représentées par des lignes rouge en pointillé. Il faut reprendre le modèle en enlevant les points concernés s’il y en a pour vérifier qu’ils ne déterminent pas le modèle à eux tout seuls. . .
+  * **Residuals vs Leverage** : Montre l’influence des echantillons (plus un point est à droite et plus il en a). Si un point est un outliers il apparaitra trés éloigné des autres et en dehors des bornes par rapport à la distance de Cook. Ces bornes sont représentées par des lignes rouge en pointillé. Il faut reprendre le modèle en enlevant les points concernés s’il y en a pour vérifier qu’ils ne déterminent pas le modèle à eux tout seuls.
 
 Ici les points sont tous relativement proches de la courbe rouge, et surtout ne dépassent aucune distance de Cook (en pointillé). On peut donc être satisfait de l'influence des échantillons.
 
@@ -279,8 +302,8 @@ Ici les points sont tous relativement proches de la courbe rouge, et surtout ne 
 
 On peut faire un test du qui-2 ou de Shapiro pour vérifier les hypothèses suivantes :
 
-(H0) Les résidus suivent une loi normale
-(H1) Les résidus ne suivent pas une loi normale
+  * (H0) Les résidus suivent une loi normale
+  * (H1) Les résidus ne suivent pas une loi normale
 
 ```{r, echo=TRUE}
 shapiro.test(residuals(temps.lm))
@@ -288,21 +311,11 @@ shapiro.test(residuals(temps.lm))
 Rappel : Dans chaque cas les tests doivent être appliqués sur les résidus du modèle, et une p-valeur petite signifie un
 rejet de l’hypothèse, donc du modèle de régression.
 
-Ici la p-valeur est relativement grande, donc on peut peut rien conclure, autrement dit, on ne peut pas réfuter (H0) et valider (H1) çàd que on ne peut pas dire avec ce test, que les données ne suivent pas une loi normale. ATTENTION : On ne peut cependant pas conclure pour autant que les données suivent bien une loi normale !
+Ici la p-valeur est relativement grande, donc on peut peut rien conclure, autrement dit, on ne peut pas réfuter (H0) et valider (H1), c'est-à-dire qu'on ne peut pas dire avec ce test que les données ne suivent pas une loi normale. ATTENTION : On ne peut cependant pas conclure pour autant que les données suivent bien une loi normale !
 
 ## 2.2. Comportement par rapport au nombre de sommets : étude du comportement moyen
 
-Récupération du temps moyen.
-
-Ajustement du modèle linéaire de $\log(temps.moy)^2$ en fonction de $n$.
-
-Analyse de la validité du modèle : 
-
-  * pertinence des coefficients et du modèle, 
-  
-  * étude des hypothèses sur les résidus.
-
-Affichage graphique de $temps.moy$ et de sa régression linéaire :
+Récupération du temps moyen : ajustement du modèle linéaire de $\log(temps.moy)^2$ en fonction de $n$.
 
 ```{r, echo=TRUE}
 temps.moy <- rowMeans(temps) # on remplace nos lignes de 10 valeurs par la moyenne des ses valeurs
@@ -312,9 +325,12 @@ par(mflow=c(1,2)) # 2 graphiques en 1 ligne
 matplot(seqn, temps.moy, xlab="n", ylab="temps.moy", type = "o")
 matplot(seqn, log(temps.moy)^2, xlab="n", ylab=expression(log(temps)^2), type = "o")
 ```
+
 Graphiquement, la régression linéaire à l'air correcte.
 
-Ajustement du modèle de régression linéaire simple gaussien de $log(temps.moy)^2$ :
+Ajustement du modèle de régression linéaire simple gaussien de $log(temps.moy)^2$, puis analyse de la validité du modèle : 
+
+  * pertinence des coefficients et du modèle
 
 ```{r, echo=TRUE}
 # ajustement du modèle de régression linéaire simple gaussien de log(temps.moy)^2
@@ -323,7 +339,9 @@ vect_temps_moy <- log(as.vector(temps.moy))^2
 temps.moy.lm <- lm(vect_temps_moy~seqn) # calcul des résidus
 summary(temps.moy.lm) # afficher un résumé du calcul des résidus
 ```
-p-valeur est très petite donc les coefs sont pertinents.
+La p-valeur est très petite donc les coefs sont pertinents.
+
+  * étude des hypothèses sur les résidus.
 
 ```{r, echo=TRUE}
 par(mflow=c(2,2)) # 4 graphiques
@@ -335,15 +353,84 @@ Le résumé du calcul des résidus
 
 ## 2.3. Comportement par rapport à la structure du graphe
 
-Lecture du fichier 'DonneesTSP.csv'.
+Lecture du fichier 'DonneesTSP.csv'. Ce fichier au format CSV contient une première ligne avec le nom des colonnes du dataframe, ainsi que les lignes des valeurs de ce dataframe. Attention à bien spécifier le séparateur !
 
-Ajustement du modèle linéaire de $\log(temps.moy)$ en fonction de toutes les variables présentes. Modèle sans constante.
+```{r, echo=TRUE}
+# DonneesGPSvilles.csv contient les coordonnées GPS de 22 villes françaises
+data.graph <- read.csv('/home/onyr/Documents/code/R/4if_s1_stats_tp_tsp/data/DonneesTSP.csv',header=TRUE,dec='.',sep=',',quote="\"")
+class(data.graph)
+str(data.graph)
+```
+On veut construire le modèle de régression linéaire de `log(tps)` par rapport à `sqrt(dim)` et à toutes les autres variables de `data.graph`. Il faut donc créer un dataframe avec sans `log(tps)` et avec une colonne `sqrt(dim)`.
+
+```{r, echo=TRUE}
+# extract and modify columns from data.graph dataframe
+sqrt_dim <- apply(X = as.array(data.graph$dim), MARGIN = 1, FUN = sqrt) # build vector of sqrt(data.graph$dim)
+log_tps <- apply(X = as.array(data.graph$tps), MARGIN = 1, FUN = sqrt) # build vector of log(data.graph$tps)
+
+# create modified dataframe
+data.graph_modified <- data.frame(sqrt_dim, data.graph$mean.long, data.graph$mean.dist, data.graph$sd.dist, data.graph$mean.deg, data.graph$sd.deg, data.graph$diameter)
+data_graph_modified_row_names <- c("sqrt(dim)", "mean.long", "mean.dist", "sd.dist", "mean.deg", "sd.deg", "diameter")
+colnames(data.graph_modified) <- data_graph_modified_row_names
+
+str(data.graph_modified)
+```
+
+Construction du modèle de régression linéaire de `log(tps)` par rapport à `sqrt(dim)` et à toutes les autres variables de `data.graph` (ici, donc de `data.graph_modified`).
+
+```{r, echo=TRUE}
+# Ajustement du modèle linéaire de $\log(temps.moy)$ en fonction de toutes les variables présentes
+
+data_graph_row_names <- c("tps", "dim", "mean.long", "mean.dist", "sd.dist", "mean.deg", "sd.deg", "diameter")
+log_tps.lm <- lm(log_tps~., data = data.graph_modified) # calcul des résidus
+summary(log_tps.lm) # display summary of usefulness of variables to see which ones are interesting
+```
+
+Plus la p-valeur (indiquée par `Pr(>|t|)`) est faible, plus le coef sert à quelque chose pour l'influence sur la "fitness" du modèle. 
+
+Ici, on se rends compte que seul le paramètre `sqrt(dim)` a une p-valeur très faible (< 1e-04) Donc ici un seul paramètre suffit largement. Les autres variables sont probablement peu pertinentes dans le modèle.
+
+Afin de sélectionner les variables explicatives du modèle, on va utiliser un critère appelé AIC.
 
 Mise en \oe uvre d'une sélection de variables pour ne garder que les variables pertinentes.
 
-Analyse de la validité du modèle : 
+```{r, echo=TRUE}
+# AIC criterion for selecting explanatory variables using a Stepwise Algorithm
+slm <- step(log_tps.lm)
+summary(slm)
+```
 
-  * pertinence des coefficients et du modèle, 
-  
+La méthode AIC a donc sélectionné les variables `sqrt(dim)`, `mean.dist`, `sd.deg` et `diameter` en tant que variables  explicatives pertinente pour le modèle.
+
+Variables exclues du modèle : 
+  * `sd.dist`
+  * `mean.long`
+  * `mean.deg`
+
+*Test de Fisher :* rappels
+
+  * *F-statistic* = test de Fisher de pertinence du modèle. Un modèle pertinent est un modèle tel que R^2 est significativement supérieur à 0. F = (R^2/1-R^2)(N-K)/(K-1) avec K le nombre de variables dans le modèle (hors constante). La p-valeur donne la probabilité de se trompe si on affirme que le modèle n’est pas pertinent.
+
+Ici, la p-valeur est très faible (< 1e-15), donc on peut réfuter (H0) et donc valider (H1), c'est-à-dire qu'on peut affirmer avec très peu de chances de se tromper, que la modélisation est fausse.
+
+On va maintenant utiliser faire l'étude graphique des résidus, afin de vérifier la pertinence du modèle après sélection de variables par AIC.
+
+```{r, echo=TRUE}
+par(mflow=c(2,2)) # 4 graphiques
+plot(slm)
+```
+
   * étude des hypothèses sur les résidus.
+
+*Interprétation des 4 courbes :*
+
+  * **Residuals vs Fitted** : La courbe forme une hyperbole inversé visible, le modèle ne semble pas si bon que ça, un meilleur changement de variable pourrait permettre de faire mieux.
+
+  * **Normal Q-Q** : Ici, les points suivent relativement bien la droite la régression semble correcte.
+
+  * **Scale location** : Ici la droite semble suffisament plate. Les résidus sont possiblement nuls.
+
+  * **Residuals vs Leverage** : Si un point est un outliers il apparaitra trés éloigné des autres et en dehors des bornes par rapport à la distance de Cook. Ces bornes sont représentées par des lignes rouge en pointillé. Ici, tout semble correcte, aucun point ne dépasse les lignes de Cook.
+
+L'analyse graphique des résidus ne permettant pas d'invalider le modèle avec sûreté, celui-ci semble potentiellement correct même si un meilleur modèle peut sans doute être trouvé.
 
