@@ -1,0 +1,144 @@
+# TP - Projection aléatoire - `housing` ELM - Correction
+
+```{r, include=FALSE}
+source("15_loocv.R", local = knitr::knit_global())
+```
+
+```{r}
+set.seed(1123)
+```
+
+## Créations des jeux d'entraînement et de test
+
+Nous reproduisons les prétraitements découverts pendant l'analyse exploratoire
+```{r}
+housing <- read.csv(file="data/housing.csv",header=TRUE)
+housing$ocean_proximity <- as.factor(housing$ocean_proximity)
+housing$total_bedrooms[is.na(housing$total_bedrooms)] <-
+                       median(housing$total_bedrooms, na.rm=TRUE)
+housing <- housing[housing$ocean_proximity != "ISLAND", ]
+housing['rooms_per_household'] <- housing['total_rooms'] / housing['households']
+housing['bedrooms_per_household'] <- housing['total_bedrooms'] / housing['households']
+housing['population_per_household'] <- housing['population'] / housing['households']
+housing <- housing[housing$median_house_value < 500001, ]
+housing <- housing[-1980,]
+```
+
+Nous rappelons une fonction pour créer un jeu d'entraînement et un jeu de test.
+```{r}
+# Séparer le jeu de données en un jeu d'entraînement et un jeu de test
+# INPUT : jeu de données initial et proportion des données conservées pour
+#         l'entraînement.
+splitdata <-
+function(data,p)
+{
+  n <- nrow(data$X)
+  nentr <- round(p*n)
+  entridx <- sample(1:n, nentr, replace=FALSE)
+  list(entr  = list(X = data$X[entridx,,drop=FALSE],  Y = data$Y[entridx]),
+       test = list(X = data$X[-entridx,,drop=FALSE], Y = data$Y[-entridx]))
+}
+```
+
+Nous créons les jeux de données.
+```{r}
+data <- list(X=housing[,c("longitude", "latitude", "housing_median_age",
+                          "rooms_per_household", "bedrooms_per_household",
+                          "population_per_household", "households",
+                          "median_income")],
+             Y=housing[,c("median_house_value")])
+splitres <- splitdata(data,0.8)
+entr <- splitres$entr
+test <- splitres$test
+```
+
+Si nous essayons d'inférer un modèle ELM avec l'appel ci-dessous qui utilise le code développé pour les données synthétiques `sinc`, nous rencontrons un bug car la projection aléatoire des données peut créer des colonnes avec seulement des valeurs négative. Lorsqu'une telle colonne est transformée, par exemple par la fonction non linéaire `ReLU`, elle deviendra pleine de zéros et rendra impossible le calcul de la décomposition en valeurs singulières. C'est pourquoi, pour les modèles qui emploient des fonctions de transformation non linéaires, les données sont souvent normalisées entre $0$ et $1$. Par ailleurs, s'il reste des colonnes nulles dans $\mathbf{H}$, nous les retirons (et nous mettons à jour en conséquence les vecteurs aléatoires $\mathbf{W}$ et $\mathbf{b}$).
+```{r eval=FALSE}
+rm <- elm(entr$X,entr$Y)
+```
+
+## Modèle ELM
+
+```{r}
+relu <- function(x){ifelse(x>=0,x,0)}
+logistic <- function(x){1/(1+exp(-x))}
+
+elm <-
+function(X,y,m=1000,method=c('logistic', 'ReLU'),lambdas=NULL)
+{
+  method <- match.arg(method)
+
+  X <- as.matrix(X)
+  Xisnum <- apply(X,2,is.numeric) # les colonnes qui sont des facteurs
+                                  # n'ont pas besoin d'être normalisées
+  Xmax <- apply(X[,Xisnum],2,max)
+  Xmin <- apply(X[,Xisnum],2,min)
+  Xrange <- Xmax - Xmin
+  X[,Xisnum] <- sweep(X[,Xisnum],2,Xmin,'-')
+  X[,Xisnum] <- sweep(X[,Xisnum],2,Xrange,'/')
+
+  p <- ncol(X)
+  W <- matrix(runif(p*m, min=-1, max=1), nrow=p, ncol=m)
+  H <- X%*%W
+  b <- runif(m)
+  H <- sweep(H,2,b,'+')
+
+  if(method=='logistic') {
+    H <- logistic(H)
+  } else if(method=='ReLU') {
+    H <- relu(H)
+  }
+
+  nullcols <- which(apply(H,2,sum)<=1)
+  if(length(nullcols)>0) {
+    H <- H[,-nullcols]
+    W <- W[,-nullcols]
+    b <- b[-nullcols]
+    m <- m - length(nullcols)
+  }
+
+  rm <- ridge(H,y,lambdas)
+  r <- list(ridge = rm,
+            m = m,
+            W = W,
+            b = b,
+            method=method,
+            isnum = Xisnum,
+            min = Xmin,
+            range = Xrange)
+  class(r) <- "elm"
+  return(r)
+}
+
+predict.elm <-
+function(o, newdata)
+{
+  newdata <- as.matrix(newdata)
+  newdata[,o$isnum] <- sweep(newdata[,o$isnum],2,o$min,'-')
+  newdata[,o$isnum] <- sweep(newdata[,o$isnum],2,o$range,'/')
+
+  H <- newdata %*% o$W
+  H <- sweep(H,2,o$b,'+')
+  if(o$method=='logistic') {
+    H <- logistic(H)
+  } else if(o$method=='ReLU') {
+    H <- relu(H)
+  }
+  yh <- predict(o$ridge,H)
+}
+```
+
+## Prédictions sur le jeu de test
+
+Nous apprenons un modèle par projection aléatoire et un modèle ridge.
+```{r}
+lambdas <- 10^seq(-3,2,length.out=10)
+rm <- elm(entr$X,entr$Y,m=200,method='logistic',lambdas=lambdas)
+lm <- ridge(entr$X,entr$Y)
+rmYh <- predict(rm,test$X)
+lmYh <- predict(lm,test$X)
+rmTestMAE <- mean(abs(rmYh - test$Y))
+lmTestMAE <- mean(abs(lmYh - test$Y))
+```
+
+Sur le jeu de test, le modèle par projection aléatoire commet une erreur absolue moyenne de `r rmTestMAE` tandis que le modèle linéaire régularisé commet une erreur de `r lmTestMAE`.

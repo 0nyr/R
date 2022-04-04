@@ -1,0 +1,166 @@
+---
+title: "18 Régression ridge à noyau"
+author: Pierre-Edouard Portier
+date: mars 2022
+output:
+  beamer_presentation:
+    incremental: false
+---
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("04_validation_croisee.R", local = knitr::knit_global())
+source("18_kernel_ridge_regression.R", local = knitr::knit_global())
+```
+
+# Noyau gaussien
+
+>- Jeu de données : $(\mathbf{x_i},y_i) \quad \text{avec} \quad i=1,\dots,n \quad ; \quad y_i \in \mathbb{R} \quad ; \quad \mathbf{x_i} \in \mathbb{R}^d$
+>- Un \emph{noyau} $k$ est une mesure de similarité entre observations : $k: \mathbb{R}^d \times \mathbb{R}^d \rightarrow \mathbb{R}$
+>- Noyau gaussien
+$$
+k(\mathbf{x_j},\mathbf{x_i}) = exp\left(-\frac{1}{\sigma^2}\|\mathbf{x_j}-\mathbf{x_i}\|^2\right)
+$$
+```{r, echo=FALSE, fig.height=3, fig.width=4}
+d <- seq(from=0, to=5, by=0.1)
+k <- function(sigma,d){exp(-(1/sigma^2)*d^2)}
+plot(x=d, y=k(1,d), type="l")
+```
+
+# Combinaison linéaire de similarités
+
+>- $f(\mathbf{x}) = \sum_{i=1}^{n} \alpha_i k(\mathbf{x},\mathbf{x_i})$
+>- Chaque $k(\cdot,\mathbf{x_i})$ est une fonction gaussienne
+>- $f$ est une superposition de fonctions gaussiennes
+>- Plus $\mathbf{x}$ est proche de $\mathbf{x_i}$, plus $\mathbf{x_i}$ pèse dans le calcul de $\mathbf{x}$
+>- Approche \emph{non paramétrique} qui s'adapte aux données au lieu d'adpater les paramètres d'une forme fonctionnelle fixée a priori
+
+# Combinaison linéaire de similarités
+
+```{r, echo=FALSE}
+set.seed(1123)
+npts <- 8
+xi <- runif(npts, min=0, max=5)
+ci <- rnorm(npts)
+xs <- seq(from=0, to=5, by=0.1)
+fi <- function(ci,xi) function(x) ci * exp(-(x-xi)^2)
+call_f <- function(f,...) f(...)
+m <- t(matrix(unlist(lapply(Map(fi,ci,xi), call_f, xs)), nrow=npts, byrow=TRUE))
+g <- rowSums(m)
+plot(xs, g, type="l", lty="solid", ylim=range(cbind(g,m)))
+matplot(xs, m, type="l", lty="dashed", col=1, add=TRUE)
+points(x=xi, y=rep(0,npts))
+```
+
+# Régression ridge à noyau
+
+$$
+\begin{aligned}
+\mathbf{X} &\in \mathbb{R}^{n\times d} \\
+\hat{\boldsymbol\beta} &= (\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{y} \quad \text{Régression normale} \\
+\hat{\boldsymbol\beta}_\lambda &= \left(\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I}_d\right)^{-1}\mathbf{X}^T\mathbf{y} \quad \text{Régression ridge} \\
+\phi &: \mathbb{R}^d \rightarrow \mathbb{R}^k \quad \text{avec } 1 \leq k \leq +\infty \\
+\boldsymbol\Phi &= \left[ \phi(\mathbf{x_1}),\dots, \phi(\mathbf{x_n}) \right] \in \mathbb{R}^{n\times k}
+\end{aligned}
+$$
+
+# Régression ridge à noyau
+
+$$
+\begin{aligned}
+ & \hat{\boldsymbol\beta}_\lambda = \left(\boldsymbol\Phi^T\boldsymbol\Phi + \lambda \mathbf{I_k}\right)^{-1}\boldsymbol\Phi^T\mathbf{y} \\
+= \{& \text{Identité de Woodbury} \} \\
+ & \hat{\boldsymbol\beta}_\lambda = \boldsymbol\Phi^T\left(\boldsymbol\Phi\boldsymbol\Phi^T + \lambda \mathbf{I_n}\right)^{-1}\mathbf{y} \\
+= \{& \mathbf{\alpha} = \left(\boldsymbol\Phi\boldsymbol\Phi^T + \lambda \mathbf{I_n}\right)^{-1}\mathbf{y} \} \\
+ & \hat{\boldsymbol\beta}_\lambda = \sum_{i=1}^{n} \alpha_i \phi(\mathbf{x_i}) \\
+\end{aligned}
+$$
+
+# Régression ridge à noyau
+
+$$
+\begin{aligned}
+ & \hat{y} = \phi(\mathbf{x})^T \hat{\boldsymbol\beta}_\lambda \\
+= \{& \text{Voir slide précédent} \} \\
+ & \hat{y} = \sum_{i=1}^{n} \alpha_i \phi(\mathbf{x})^T \phi(\mathbf{x_i}) \\
+= \{& k(\mathbf{x},\mathbf{y}) = \phi(\mathbf{x})^T\phi(\mathbf{y}) \} \\
+ & \hat{y} = \sum_{i=1}^{n} \alpha_i k(\mathbf{x},\mathbf{x_i}) \\
+= \{& K_{ij} = \phi(\mathbf{x_i})^T\phi(\mathbf{x_j}) \quad ; \quad \mathbf{k(x)} = \left[  k(\mathbf{x},\mathbf{x_1}),\dots, k(\mathbf{x},\mathbf{x_n})\right] \} \\
+ & \hat{y} = \mathbf{k(x)}^T \left( \mathbf{K} + \lambda \mathbf{I_n} \right)^{-1} \mathbf{y}
+\end{aligned}
+$$
+
+# Calcul de la régression ridge à noyau
+
+>- $\mathbf{G} \triangleq \mathbf{K} + \lambda \mathbf{I_n}$
+>- $\boldsymbol\alpha_\lambda = \mathbf{G}^{-1} \mathbf{y}$
+>- $\mathbf{\hat{y}} = \mathbf{K}\mathbf{G}^{-1} \mathbf{y}$
+>- $\mathbf{K}=\mathbf{Q}\boldsymbol\Lambda\mathbf{Q}^T$
+>- $\mathbf{G} = \mathbf{Q} \left( \boldsymbol\Lambda + \lambda \mathbf{I_n} \right) \mathbf{Q}^T$
+>- $\mathbf{G}^{-1} = \mathbf{Q} \left( \boldsymbol\Lambda + \lambda \mathbf{I_n} \right)^{-1} \mathbf{Q}^T$
+>- $\boldsymbol\alpha_\lambda = \mathbf{Q} \left( \boldsymbol\Lambda + \lambda \mathbf{I_n} \right)^{-1} \mathbf{Q}^T \mathbf{y}$
+>- Décomposition de $\mathbf{K}$ en $\mathcal{O}(n^3)$
+>- Calcul de $\boldsymbol\alpha_\lambda$ pour $\lambda$ fixé en $\mathcal{O}(n^2)$
+
+# LOOCV pour le choix de $\lambda$
+
+>-
+$$
+LOO_\lambda = \frac{1}{n} \sum_{i=1}^{n} \left( \frac{y_i - \hat{y_{\lambda_i}}}{1 - h_i} \right)^2
+$$
+
+>-
+$$
+LOO_\lambda = \frac{1}{n} \sum_{i=1}^{n} \left( \frac{y_i - \left(\mathbf{K}\mathbf{G}^{-1} \mathbf{y}\right)_i}{1 - \left(\mathbf{K}\mathbf{G}^{-1}\right)_{ii}} \right)^2
+$$
+
+>-
+$$
+LOO_\lambda = \frac{1}{n} \sum_{i=1}^{n} \left( \frac{\alpha_i}{\left(\mathbf{G}^{-1}\right)_{ii}} \right)^2
+$$
+
+>-
+$$
+\left(\mathbf{G}^{-1}\right)_{ij} = \sum_{k=1}^{n} \frac{Q_{ik}Q_{jk}}{\Lambda_{kk} + \lambda}
+$$
+
+# Choix de l'hyper-paramètre $\sigma^2$
+
+>- Pour des données standardisées : $E\left[\|\mathbf{x_j}-\mathbf{x_i}\|^2\right] = 2d$
+>- Avec $\sigma^2=d$, les points les plus proches ont une similarité proche de $1$ et ceux les plus éloignés une similarité proche de $0$. Autrement dit, le noyau gaussien capture alors bien les similarités entre les points.
+
+# Exemple sur un jeu de données synthétique
+
+```{r, eval=FALSE}
+  set.seed(1123)
+  n <- 100
+  data = gendat(n,0.2)
+  splitres <- splitdata(data,0.8)
+  entr <- splitres$entr
+  test <- splitres$test
+
+  km <- krr(entr$X,entr$Y)
+  yh <- predict(km,test$X)
+  plt(test,f)
+  points(test$X, yh, pch=4)
+  testmae <- mean(abs(yh-test$Y))
+```
+
+# Exemple sur un jeu de données synthétique
+
+```{r, echo=FALSE}
+  set.seed(1123)
+  n <- 100
+  data = gendat(n,0.2)
+  splitres <- splitdata(data,0.8)
+  entr <- splitres$entr
+  test <- splitres$test
+
+  km <- krr(entr$X,entr$Y)
+  yh <- predict(km,test$X)
+  plt(test,f)
+  points(test$X, yh, pch=4)
+  testmae <- mean(abs(yh-test$Y))
+```
+
+- Erreur absolue moyenne de `r round(testmae,2)` sur le jeu de test

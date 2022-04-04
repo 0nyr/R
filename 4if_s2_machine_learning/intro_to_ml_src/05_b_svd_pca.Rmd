@@ -1,0 +1,153 @@
+# SVD et Analyse en Composantes Principales
+
+```{r, include=FALSE}
+source("05_svd_pca.R", local = knitr::knit_global())
+```
+
+```{r}
+set.seed(1123)
+```
+
+## Projection sur les axes principaux
+
+### SVD
+
+Soit une matrice de données $\mathbf{X}\in\mathbb{R}^{n \times p}$ dont la décomposition en valeurs singlières est :
+$$\mathbf{X} = \sum_{\alpha}\sqrt{\lambda_\alpha}\mathbf{u_\alpha}\mathbf{v_\alpha}^T \quad\equiv\quad \mathbf{X} = \mathbf{U} \mathbf{D} \mathbf{V}^T $$
+
+### Facteurs
+
+Nous avons montré que la projection orthogonale des lignes $\mathbf{x_i}$ de $\mathbf{X}$ sur $\mathbf{v_1},\dots,\mathbf{v_k}$ est la meilleure approximation $k$-dimensionnelle de $\mathbf{X}$ au sens de la minimisation des résidus au carré. Les axes de vecteurs directeurs $\mathbf{v_\alpha}$ sont appelés les \emph{axes principaux}. Les coordonnées des observations sur les axes principaux sont appelées \emph{facteurs}. Notons $\mathbf{F}$ la matrice dont les lignes sont les facteurs :
+$$\mathbf{F} \triangleq \mathbf{X}\mathbf{V} = \mathbf{U} \mathbf{D} \mathbf{V}^T\mathbf{V} = \mathbf{U} \mathbf{D}$$
+
+La covariance des facteurs est :
+$$\left(\mathbf{U} \mathbf{D}\right)^T\left(\mathbf{U} \mathbf{D}\right) = \mathbf{D}^2$$
+Nous vérifions ainsi que, par construction, les facteurs sont orthogonaux et que $\lambda_\alpha$ est la somme des facteurs au carré sur l'axe $\mathbf{v_\alpha}$, autrement dit, la variance expliquéee par cet axe.
+
+### Contributions des observations
+
+Nous pouvons mesurer la contribution $CTR_{i,\alpha}$ d'une observation $\mathbf{x_i}$ à la variance expliquée par $\mathbf{v_\alpha}$ :
+$$CTR_{i,\alpha} = \frac{f_{i,\alpha}^2}{\sum_i f_{i,\alpha}^2} = \frac{f_{i,\alpha}^2}{\lambda_\alpha}$$
+
+Puisque $\sum_i CTR_{i,\alpha} = 1$, nous pouvons considérer, de façon heuristique, que les observations qui contribuent le plus à expliquer l'axe $\mathbf{v_\alpha}$ sont telles que $CTR_{i,\alpha} \geq 1/n$. Les observations dont les contributions sont les plus importantes et de signes opposés peuvent permettre d'interpréter un axe en fonction de l'opposition de ses pôles.
+
+### Contributions des axes
+
+Nous pouvons similairement mesurer combien l'axe $\mathbf{v_\alpha}$ contribue à expliquer l'écart au centre de gravité d'une observation $\mathbf{x_i}$ :
+$$COS2_{i,\alpha} = \frac{f_{i,\alpha}^2}{\sum_\alpha f_{i,\alpha}^2} = \frac{f_{i,\alpha}^2}{d_{i,g}^2}$$
+Avec $d_{i,g}^2$ le carré de la distance de l'observation $\mathbf{x_i}$ au centre de gravité $g$. $d_{i,g}^2 = \sum_j \left(x_{i,j}-g_j\right)^2$. Si les données sont centrées alors $d_{i,g}^2 = \sum_j x_{i,j}^2$. La somme des carrés des distances au centre de gravité pour toutes les observations est égale à la variance totale des données, ou inertie totale : $\sum_i d_{i,g}^2 = \mathcal{I} = \sum_\alpha \lambda_\alpha$.
+
+### Contribution des variables aux axes principaux
+
+Les axes principaux $\mathbf{v_\alpha}$ sont des combinaisons linéaires des variables initiales. Lorsque la matrice initiale est centrée et réduite, les éléments de $(\lambda_\alpha/\sqrt{n-1})\mathbf{v_\alpha}$ représentent les corrélations entre les variables initiales et l'axe $\mathbf{v_\alpha}$. Ainsi, nous pouvons mesurer la contribution des variables initiales à l'expression de la variance expliquée par chaque axe principal (l'expression est au carré pour que la somme des contributions des variables à l'axe $\mathbf{v_\alpha}$ soit égale à $1$) :
+$$VARCTR_{j,\alpha} = \left(\frac{\lambda_\alpha}{\sqrt{n-1}}\mathbf{v_\alpha}\right)^2$$
+
+## Implémentation
+
+Nous écrivons une fonction `fa` (_factor analysis_) qui :
+
+- utilise l'algorithme `k-means` pour découvrir une centaine de clusters à partir des données standardisées,
+- applique une décomposition en valeurs singulières sur les centres standardisés des clusters,
+- calcule :
+  - le pourcentage de variance expliquée par chaque axe principal (`prctPrcp`),
+  - les facteurs (`fact`), c'est-à-dire les coordonnées des observations sur les axes principaux,
+  - les contributions des observations aux axes principaux (`ctr`),
+  - les contributions des axes principaux aux écarts au centre d'inertie des observations (`cos2`),
+  - les contributions des variables aux axes principaux (`varctr`)
+
+Nous écrivons une fonction `print.fa` qui affiche sur les axes principaux `d1` (par défaut $1$) et `d2` (par défaut $2$) les centres des clusters qui contribuent le plus à ces axes.
+
+Nous écrivons une fonction `away.fa` qui retourne le cluster (son identifiant, sa taille et les noms des observations qui le composent) qui a le plus d'inertie (i.e., qui est le plus éloigné du centre d'inertie, c'est-à-dire l'origine du repère pour des données centrées) le long de l'axe principal `d` (par défaut $1$).
+
+```{r, code=readLines("05_svd_pca.R"), eval=FALSE}
+```
+
+## Exemple
+
+Considérons le jeu de données `abalone` introduit dans un précédent module. Nous retirons les observations pour lesquelles la variable `height` est nulle.
+```{r cache=TRUE}
+abalone.cols = c("sex", "length", "diameter", "height", "whole.wt",
+                 "shucked.wt", "viscera.wt", "shell.wt", "rings")
+
+url <- 'http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data'
+abalone <- read.table(url, sep=",", row.names=NULL, col.names=abalone.cols,
+                      nrows=4177)
+abalone <- subset(abalone, height!=0)
+```
+
+Nous sélectionnons les variables explicatives numériques dans une matrice $\mathbf{X}$.
+```{r}
+X <- abalone[,c("length", "diameter", "height", "whole.wt","shucked.wt",
+                "viscera.wt", "shell.wt")]
+```
+
+Nous réalisons une première fois l'analyse en composantes principales.
+```{r}
+fam <- fa(X) # fam pour 'factor analysis model'
+```
+
+Nous affichons le pourcentage de variance expliquée par chaque axe principal.
+```{r}
+fam$prctPrcp
+```
+
+Nous affichons, sur les deux premiers axes principaux, les centres des clusters qui contribuent le plus à ces axes.
+```{r}
+print(fam)
+```
+
+```{r}
+far <- away(fam,2)
+```
+
+Le cluster `r far$id` (`far$id`) qui explique le plus la variance du deuxième axe principal semble anormalement important. Il contribue à expliquer `r round(fam$ctr[far$id,2]*100, 2)` % (`round(fam$ctr[far$id,2]*100, 2)`) de la variance du second axe. Il est composé de seulement `r far$size` (`far$size`) élément :
+```{r}
+abalone[far$names,]
+```
+
+Nous retrouvons l'observation anormale déjà identifiée dans une précédente analyse. Nous recommençons l'analyse en le retirant :
+```{r, warning=FALSE}
+abalone <- abalone[!(row.names(abalone) %in% far$names),]
+X <- abalone[,c("length", "diameter", "height", "whole.wt","shucked.wt",
+                "viscera.wt", "shell.wt")]
+fam <- fa(X)
+```
+
+Nous affichons le pourcentage de variance expliquée par chaque axe principal.
+```{r}
+fam$prctPrcp
+```
+
+Après cette correction, nous voyons qu'une part encore plus importante de la variance est expliquée par le premier axe principal. Cela peut nous indiquer que les variables explicatives sont très corrélées.
+
+Nous calculons à nouveau les facteurs et les contributions des observations aux axes principaux. Nous affichons, sur les deux premiers axes principaux, les centres des clusters qui contribuent le plus à ces axes.
+```{r}
+print(fam)
+```
+
+```{r}
+far <- away(fam,2)
+```
+
+Le cluster `r far$id` est intrigant. Sa taille est : `r far$size`. C'est encore un singleton qui correspond à l'observation `r far$names` du jeu de données original. Nous découvrons qu'il s'agit sans doute d'une anomalie pour la variable `height` :
+```{r}
+abalone[far$names,]
+```
+
+```{r}
+boxplot(abalone$height)
+```
+
+Nous affichons les contributions des axes principaux à l'écart au centre d'inertie du cluster `r far$id`.
+```{r}
+fam$cos2[far$id,]
+```
+
+Nous vérifions que cette observation, sans doute anormale, est presque entièrement expliquée par les deux premiers axes principaux. Nous ne prenons donc pas de risque à considérer comme significatif son écart à l'origine dans le plan formé par ces deux axes.
+
+Observons aussi les contributions des variables aux axes principaux :
+```{r}
+fam$varctr
+```
+
+Nous voyons à nouveau que toutes les variables sont très corrélées car elles contribuent toutes fortement à la variance expliquée par le premier axe principal.

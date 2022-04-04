@@ -1,0 +1,172 @@
+# Bréviaire proba/stat
+
+## Probabilités
+
+### Espérance
+
+$$
+\begin{aligned}
+E[X] &= \lim_{n \rightarrow \infty} \frac{X_1 + \dots + X_n}{n} \\
+E[X] &= \sum_{c \in A} c P(X=c) \quad \text{$X$ var aléatoire discrète de support $A$} \\
+E[U+V] &= E[U] + E[V] \\
+E[aU] &= a E[U] \\
+E[g(X)] &= \sum_{c \in A} g(c) P(X=c) \\
+E[UV] &= E[U] E[V] \quad \text{si $U$ et $V$ sont indépendantes} \\
+\end{aligned}
+$$
+
+### Variance
+
+$$
+\begin{aligned}
+Var[U] &= E[(U - EU)^2] \\
+Var[U] &= E[U^2] - (EU)^2 \\
+g(c) &= E[(U - c)^2] \quad \text{Erreur de l'estimation de $U$ par $c$. $c=E[x]$ minimise $g(c)$.} \\
+Var[cU] &= c^2Var[U] \\
+Var[U+d] &= Var[U] \\
+P(|X-\mu| \geq c\sigma) &\leq \frac{1}{c^2} \quad \text{Inégalité de Chebychev pour $X$ var aléatoire de moyenne $\mu$ et variance $\sigma^2$.} \\
+\text{coef. var.} &= \frac{\sqrt{Var[X]}}{E[X]} \quad \text{L'amplitude de $Var$ dépend de celle de $E$. Le coef de variation est sans dimension.} \\
+Cov[U,V] &= E[(U-EU)(V-EV)] \\
+Cov[U,V] &= E[UV] - E[U]E[V] \\
+Var[aU+bV] &= a^2Var[U] + b^2Var[V] + 2 ab Cov[U,V] \\
+\rho(U,V) &= \frac{Cov[U,V]}{\sqrt{Var[U]}\sqrt{Var[V]}} \; , \; -1\leq\rho(U,V)\leq 1 \quad \text{Corrélation}
+\end{aligned}
+$$
+
+## Distribution normale
+
+$$
+\begin{aligned}
+\mathcal{N}(\mu,\sigma^2) &= \frac{1}{\sqrt{2\pi}\sigma} exp\left[-0.5 \left(\frac{t-\mu}{\sigma}\right)^2\right], -\infty<t<+\infty \\
+X &\sim \mathcal{N}(\mu,\sigma^2) \quad \text{$X$ est distribué selon $\mathcal{N}(\mu,\sigma^2)$} \\
+\text{Si } X_i &\sim \mathcal{N}(\mu_i,\sigma_i^2) \text{ et } Y = a_1 X_1 + \dots + a_k X_k \text{ alors } Y \sim \mathcal{N}\left(\sum_{i=1}^k a_i\mu_i, \sum_{i=1}^k a_i^2\sigma_i^2\right) \\
+\text{Si } X &\sim \mathcal{N}(\mu,\sigma^2) \text{ alors } Z \sim \mathcal{N}(0,1) \text{ avec } Z = \frac{X-\mu}{\sigma}
+\end{aligned}
+$$
+
+## Statistiques
+
+Pour des $X_i$ indépendantes identiquement distribuées, de moyenne $\mu$ et de variance $\sigma^2$ :
+$$
+\begin{aligned}
+\bar{X} &= \frac{X_1 + \dots + X_n}{n} \quad \text{Estimateur de la moyenne de la population sur un échantillon.} \\
+E[\bar{X}] &= \mu \quad \text{Estimateur non biaisé de l'espérance.} \\
+Var[\bar{X}] &= \frac{1}{n} \sigma^2 \\
+s^2 &= \frac{1}{n} \sum_{i=1}^{n} \left(X_i - \bar{X}\right)^2 = \frac{1}{n} \sum_{i=1}^{n} X_i^2 - \bar{X}^2 \\
+E[s^2] &= \frac{n-1}{n} \sigma^2 \quad \text{Estimateur biaisé de la variance.} \\
+\sigma / \sqrt{n} &= \text{écart type de $\bar{X}$, aussi appelé erreur standard} \\
+\end{aligned}
+$$
+
+## Théorème Central Limite (CLT)
+
+Si $X_1,\dots,X_n$ sont des variables aléatoires indépendantes qui suivent la même distribution de moyenne $m$ et de variance $v^2$, alors $T=X_1+\dots+X_n$ suit approximativement $\mathcal{N}\left(nm,nv^2\right)$. L'approximation est en pratique bonne à partir d'environ $n=25$.
+
+Ainsi, $Z = \frac{\bar{X}-\mu}{\sigma / \sqrt{n}}$ suit approximativement $\mathcal{N}(0,1)$.
+
+Notons $\Phi()$ la fonction de distribution cumulative (cdf) de $\mathcal{N}(0,1)$.
+
+$$P\left(| \bar{X} - \mu | < 3\sigma/\sqrt{n}\right) = P(|Z| < 3) \approx 1 - 2\Phi(-3) = 1 - 0.0027 = 0.9973$$
+
+Avec $\Phi(-3)$ donné par `pnorm(-3) = ` `r pnorm(-3)`.
+
+L'approximation de Chebychev donnerait :
+$$P\left(| \bar{X} - \mu | \geq 3\sigma/\sqrt{n}\right) \leq \frac{1}{3^2} $$
+Soit :
+$$P\left(| \bar{X} - \mu | < 3\sigma/\sqrt{n}\right) \geq \frac{8}{9} = 0.8889 $$
+
+## Intervalles de confiance
+
+C'est sur la base du CLT que nous déterminons des intervalles de confiance.
+$$
+\begin{aligned}
+ & Z = \frac{\bar{X}-\mu}{\sigma / \sqrt{n}} \text{ suit approximativement } \mathcal{N}(0,1) \\
+\Rightarrow \{& qnorm(0.0025) = -1.96 \} \\
+ & 0.95 \approx P\left(-1.96 < \frac{\bar{X}-\mu}{\sigma / \sqrt{n}} < 1.96\right) \\
+= \{& \text{Arithmétique} \} \\
+ & 0.95 \approx P\left(\bar{X}-1.96\frac{\sigma}{\sqrt{n}} < \mu < \bar{X}+1.96\frac{\sigma}{\sqrt{n}}\right) \\
+\end{aligned}
+$$
+
+Dans cette formule, il est juste de remplacer l'écart-type $\sigma$, inconnu, par son estimation $s$.
+
+## Tests d'hypothèses
+
+- Faire une hypothèse : $H_0 : \theta = c$
+- Calculer $Z = \frac{\hat{\theta} - c}{\text{s.e.}(\hat{\theta})}$
+- Rejeter $H_0$ à un niveau de risque $\alpha = 0.005$ si $|Z|>=1.96$
+- La p-valeur est le plus faible niveau de risque auquel l'hypothèse serait rejetée.
+
+## Application aux coefficients d'un modèle linéaire
+
+Sous hypothèse d'un modèle génératif linéaire :
+$$y_i = \mathbf{X}\boldsymbol\beta + \epsilon_i \quad , \quad \epsilon_i \sim \mathcal{N}(0,\sigma^2) \; , \; Cov\left(\mathbf{y}|\mathbf{X}\right) = \sigma^2\mathbf{I} $$
+Nous avons montré que :
+$$\hat{\boldsymbol\beta} = \left(\mathbf{X}^T\mathbf{X}\right)^{-1}\mathbf{X}^T\mathbf{y}$$
+
+Nous calculons l'espérance et la variance de cet estimateur $\hat{\boldsymbol\beta}$.
+$$
+\begin{aligned}
+ & E\left[\hat{\boldsymbol\beta}\right] \\
+= \{& \text{Estimation de $\boldsymbol\beta$, voir ci-dessus.} \} \\
+ & E\left[\left(\mathbf{X}^T\mathbf{X}\right)^{-1}\mathbf{X}^T\mathbf{y}\right] \\
+= \{& \text{Hypothèse : $\mathbf{X}$ n'est pas une variable aléatoire. Linéarité de $E$.} \} \\
+ & \left(\mathbf{X}^T\mathbf{X}\right)^{-1}\mathbf{X}^TE\left[\mathbf{y}\right] \\
+= \{& \text{Hypothèse du modèle génératif linéaire, voir ci-dessus.} \} \\
+ & \left(\mathbf{X}^T\mathbf{X}\right)^{-1}\mathbf{X}^T\mathbf{X}\boldsymbol\beta \\
+= \{& \text{Algèbre linéaire.} \} \\
+ & \boldsymbol\beta \\
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+ & Cov\left[\hat{\boldsymbol\beta}\right] \\
+= \{& \text{Estimation de $\boldsymbol\beta$, voir ci-dessus.} \} \\
+ & Cov\left[\left(\mathbf{X}^T\mathbf{X}\right)^{-1}\mathbf{X}^T\mathbf{y}\right] \\
+= \{& \text{Propriétés de la variance.} \} \\
+ & \left(\mathbf{X}^T\mathbf{X}\right)^{-1}\mathbf{X}^T Cov\left[\mathbf{y}\right] \left(\left(\mathbf{X}^T\mathbf{X}\right)^{-1}\mathbf{X}^T\right)^T \\
+= \{& \text{Hypothèse du modèle génératif linéaire, voir ci-dessus.} \} \\
+ & \left(\mathbf{X}^T\mathbf{X}\right)^{-1}\mathbf{X}^T \sigma^2\mathbf{I} \left(\left(\mathbf{X}^T\mathbf{X}\right)^{-1}\mathbf{X}^T\right)^T \\
+= \{& \text{Algèbre linéaire.} \} \\
+ & \sigma^2 \left(\mathbf{X}^T\mathbf{X}\right)^{-1} \\
+\end{aligned}
+$$
+
+Par ailleurs,
+$$\sigma^2 = Var[\mathbf{y}] = E\left[\left(\mathbf{y} - \mathbf{X}\boldsymbol\beta\right)^2\right]$$
+Donc, nous avons l'estimateur :
+$$s^2 = \frac{1}{n} \sum_{i=1}^{n} \left(y_i - \hat{\beta_0} - \hat{\beta_1}X_1^{(i)} - \dots - \hat{\beta_p}X_p^{(i)}\right)^2$$
+Ainsi, un estimateur de la covariance est :
+$$\hat{Cov}[\hat{\boldsymbol\beta}] = s^2 \left(\mathbf{X}^T\mathbf{X}\right)^{-1}$$
+Les éléments diagonaux sont les carrés des erreurs standards pour les coefficients $\hat{\beta_i}$.
+
+## Indicateur $R^2$ de la qualité d'une régression linéaire
+
+L'indicateur $R^2$ est le carré de la corrélation estimée entre $\hat{y}_i$ et $y_i$. Nous pouvons également dire que c'est le pourcentage de la variance de $y_i$ expliquée par $\mathbf{x_i}$. Il y a une version ajustée de cet estimateur qui est sinon naturellement biaisé vers le haut.
+
+## Mesure des colinéarités par le facteur d'inflation de la variance
+
+Pour mesurer les colinéarités entre la variable $\mathbf{x_1}$ et les variables $\mathbf{x_2},\dots,\mathbf{x_p}$, nous pouvons apprendre un modèle de la forme :
+$$\mathbf{x_1} = \beta_0 + \beta_2\mathbf{x_2} + \dots + \beta_p\mathbf{x_p} + \epsilon$$
+Noton $R_1^2$ le carré de la corrélation estimée entre $\hat{\mathbf{x}}_1$ et $\mathbf{x_1}$. Nous pouvons alors calculer le facteur d'inflation de la variance :
+$$VIF_1 = \frac{1}{1 - R_1^2}$$
+En pratique, quand $VIF(\beta_i)>10$, la colinéarité est importante.
+
+## Effet levier des observations sur les prédictions
+
+$$
+\begin{aligned}
+ & \hat{\mathbf{y}} = \mathbf{X}\hat{\boldsymbol\beta} \\
+= \{& \text{Définition de $\hat{\boldsymbol\beta}$} \} \\
+ & \hat{\mathbf{y}} = \mathbf{X}\left(\mathbf{X}^T\mathbf{X}\right)^{-1}\mathbf{X}^T\mathbf{y} \\
+= \{& \text{Introduction de $H$} \} \\
+ & \hat{\mathbf{y}} = \mathbf{H} \mathbf{y} \\
+\end{aligned}
+$$
+
+$\mathbf{H}$ est la \emph{matrice chapeau} ou \emph{matrice de projection}. Elle projette la cible $y_i$ sur la prédiction $\hat{y}_i$.
+
+Les $h_{ii}$ sont appelés les effets levier. $h_{ii}$ quantifie l'impact de $y_i$ sur $\hat{y}_i$.
+$$0 \leq h_{ii} \leq 1 \quad , \quad \sum_{i=1}^n h_{ii} = p$$
+La valeur levier moyenne est $p/n$. Un effet levier supérieur à $2p/n$ peut indiquer une observation hors norme.

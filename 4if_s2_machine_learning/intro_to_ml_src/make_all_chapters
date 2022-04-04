@@ -1,0 +1,24 @@
+#!/bin/bash
+
+make 01_intro.pdf
+make 02_moindres_carres.pdf
+make 02_b_breviaire_proba_stat.pdf
+make 02_a_application_abalone.pdf
+make 03_tikhonov.pdf
+make 04_validation_croisee.pdf
+make 05_presentation_svd.pdf
+make 05_b_svd_pca.pdf
+make 06_matrice_definie_non_negative.pdf
+make 07_multiplicateurs_de_lagrange.pdf
+make 08_derivation_svd.pdf
+make 09_puissance_iteree_valeur_propre.pdf
+make 10_puissance_iteree_svd.pdf
+make 11_projecteurs.pdf
+make 12_factorisation_qr.pdf
+make 13_puissance_iteree_par_blocs.pdf
+make 14_geometrie_ridge_svd.pdf
+make 15_loocv.pdf
+make 16_biais_variance_estimateur.pdf
+make 17_biais_variance_ridge.pdf
+make 18_kernel_ridge_regression.pdf
+make 19_nystroem_approximation.pdf

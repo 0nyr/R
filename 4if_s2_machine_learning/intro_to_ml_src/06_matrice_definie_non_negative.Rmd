@@ -1,0 +1,64 @@
+# Matrice définie non négative
+
+Avant de présenter le cœur de la preuve de l'existence de la décomposition en valeurs singulières, nous rappelons quelques propriétés des matrices symétriques définies non négatives. Une matrice définie non négative (souvent noté PSD pour "positive semi-definite") $\mathbf{M}$ représente une métrique car elle définit un produit scalaire et donc une géométrie, c'est-à-dire qu'elle donne un sens aux notions de distance et d'angle.
+
+Le produit scalaire défini par $\mathbf{M}$ entre deux vecteurs $\mathbf{x}$ et $\mathbf{y}$ pourra se noter $<\mathbf{x},\mathbf{y}>_{\mathbf{M}} = \mathbf{x}^T\mathbf{M}\mathbf{y}$. Pour que ce produit scalaire soit valide, $\mathbf{M}$ doit respecter la contrainte $\mathbf{x}^T\mathbf{M}\mathbf{y} \geq 0$ pour tout $\mathbf{x}$ et $\mathbf{y}$.
+
+Une fois donné un produit scalaire, les notions liées de norme et d'angle suivent~: $\|\mathbf{x}\|_{\mathbf{M}} = \sqrt{<\mathbf{x},\mathbf{x}>_{\mathbf{M}}}$ et $cos^2(\mathbf{x},\mathbf{y}) = <\mathbf{x},\mathbf{y}>_{\mathbf{M}}/\|\mathbf{x}\|_{\mathbf{M}}\|\mathbf{y}\|_{\mathbf{M}}$.
+
+La géométrie euclidienne "classique" (associée à la base canonique) correspond à l'emploi de la matrice identité pour métrique, $\mathbf{M}=\mathbf{I}$.
+
+Aussi, les valeurs propres d'une matrice PSD sont toutes positives~:
+
+\begin{align*}
+ & \mathbf{x}^T\mathbf{M}\mathbf{x} \geq 0 \\
+\Rightarrow \{ & \lambda \text{ est une valeur propre de } \mathbf{M} \} \\
+ & \mathbf{x}^T\lambda\mathbf{x} \geq 0 \\
+= \{ &\text{utilisation de la métrique identité} \} \\
+ & \lambda \|x\|^2_{\mathbf{I}} \geq 0 \\
+= \{ &\|x\|^2_{\mathbf{I}} \geq 0 \} \\
+ & \lambda \geq 0
+\end{align*}
+
+Soit $\mathbf{V}$ la matrice des vecteurs propres de $\mathbf{M}$ et $\mathbf{L}$ la matrice diagonale de ses valeurs propres positives.
+
+\begin{align*}
+ & \mathbf{M}\mathbf{V} = \mathbf{V}\mathbf{L} \\
+= \phantom{\{} & \\
+ & \mathbf{M} = \mathbf{V}\mathbf{L}\mathbf{V}^{-1} \\
+= \{ & \mathbf{S} = \sqrt{\mathbf{L}}\} \\
+& \mathbf{M} = \mathbf{V}\mathbf{S}\mathbf{S}\mathbf{V}^{-1} \\
+= \{ & \quad \text{Les vecteurs propres distincts sont orthogonaux deux à deux : } \mathbf{V}^{-1} = \mathbf{V}^T. \\
+\phantom{=}\phantom{ }\phantom{\{} & \quad \mathbf{S}=\mathbf{S}^T. \text{On pose } \mathbf{T}=\mathbf{V}\mathbf{S}. \} \\
+& \mathbf{M} = \mathbf{T}\mathbf{T}^T \\
+\end{align*}
+
+Ainsi, toute matrice définie non négative $\mathbf{M}$ se décompose en $\mathbf{M}=\mathbf{T}\mathbf{T}^T$ où $\mathbf{T}$ est une transformation linéaire composée d'un changement d'échelle des axes du repère ($\mathbf{S}$) et d'une rotation ($\mathbf{V}$).
+
+Nous remarquons par exemple que l'équation d'un cercle selon la métrique $\mathbf{M}$ correspond à celle d'une ellipse selon la métrique identité $\mathbf{I}$ :
+
+\begin{align*}
+ & \|\mathbf{x}\|_{\mathbf{M}}^2 = c \\
+= \{ &\text{C'est l'équation d'un cercle, c est une constante.}\} \\
+ & < \mathbf{x}, \mathbf{x}>_{\mathbf{M}} = c \\
+= \{ &\text{Par définition du produit scalaire.} \} \\
+ & \mathbf{x}^T \mathbf{M} \mathbf{x} = c \\
+= \{ &\mathbf{M} = \mathbf{T}^T\mathbf{T}\} \\
+ & \mathbf{x}^T \mathbf{T}^T \mathbf{T} \mathbf{x} = c \\
+= \{ &\text{Par définition du produit scalaire, on retrouve le cercle déformé en une ellipse par } \mathbf{T} \} \\
+ & \|\mathbf{T}\mathbf{x}\|_{\mathbf{I}}^2 = c \\
+\end{align*}
+
+Ainsi, une matrice symétrique définie non négative projette le cercle unité sur une ellipse dont les axes orthonormaux sont les vecteurs propres et les longueurs des axes sont les valeurs propres.
+
+Enfin, l'angle formé entre $\mathbf{x}$ et $\mathbf{Mx}$ est inférieur ou égal à $\pi/2$ radians :
+
+\begin{align*}
+ & \mathbf{x}^T \mathbf{M} \mathbf{x} \geq 0 \\
+= \{&\text{Géométrie du produit scalaire. On note } \theta \text{ l'angle entre les deux vecteurs.}\} \\
+ & \|\mathbf{x}\|_\mathbf{I} \; \|\mathbf{Mx}\|_\mathbf{I} \; cos(\theta) \geq 0 \\
+\Rightarrow \phantom{\{}&\\
+ & |\theta| \leq \pi/2
+\end{align*}
+
+Ainsi, le vecteur résultat $\mathbf{Mx}$ reste du même côté que $\mathbf{x}$ par rapport à l'hyperplan perpendiculaire à $\mathbf{x}$ qui sépare l'espace en deux. Nous comprenons que le concept de matrice symétrique définie non négative est une généralisation pour un espace multidimensionnel du concept de nombre positif sur la droite réelle.

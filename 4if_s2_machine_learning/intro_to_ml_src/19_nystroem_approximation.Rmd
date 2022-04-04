@@ -1,0 +1,185 @@
+# Approximation de Nyström
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("04_validation_croisee.R", local = knitr::knit_global())
+source("18_kernel_ridge_regression.R", local = knitr::knit_global())
+```
+
+## Approximation de Nyström d'un noyau
+
+Soit un jeu de données.
+$$
+(\mathbf{x_i},y_i) \quad \text{avec} \quad i=1,\dots,n \quad ; \quad y_i \in \mathbb{R} \quad ; \quad \mathbf{x_i} \in \mathbb{R}^d
+$$
+Soit un noyau $\mathbf{K}$ (par ex. gaussien).
+$$
+\mathbf{K} =
+\left[
+\begin{array}{ccc}
+k(\mathbf{x_1},\mathbf{x_1}) & \dots & k(\mathbf{x_1},\mathbf{x_n}) \\
+\dots & \dots & \dots \\
+k(\mathbf{x_n},\mathbf{x_1}) & \dots & k(\mathbf{x_n},\mathbf{x_n}) \\
+\end{array}
+\right]
+$$
+
+Soit une approximation de rang $m$ de $\mathbf{K}$ (exprimée en fonction de la décomposition en valeurs propres).
+$$
+\mathbf{K} \approx \mathbf{U}\mathbf{\Lambda}\mathbf{U}^T \quad ; \quad \mathbf{U} \in \mathbb{R}^{n \times m} \quad ; \quad \mathbf{\Lambda} \in \mathbb{R}^{m \times m}
+$$
+
+Lorsque le noyau original est utilisé, chacune des $n$ observations du jeu de données d'apprentissage sert de centre à partir duquel mesurer la proximité d'une nouvelle observation. Le principe de l'approximation de rang $m$, selon l'approche dite de Nyström, est de ne conserver que $m$ des $n$ observations comme centres à partir desquels mesurer la proximité de nouvelles observations. Nous sélectionnons ainsi $m$ observations ($m$ lignes de $\mathbf{X}$). Plusieurs approches sont possibles (par ex., de façon aléatoire, par l'algorithme des $k$-médoïdes, etc.).
+$$
+\mathbf{K} =
+\left[
+\begin{array}{cc}
+\mathbf{K_{11}} & \mathbf{K_{21}^T}  \\
+\mathbf{K_{21}} & \mathbf{K_{22}}  \\
+\end{array}
+\right]
+\quad ; \quad
+\mathbf{K_{11}} \in \mathbb{R}^{m \times m}
+\quad ; \quad
+\mathbf{K_{21}} \in \mathbb{R}^{(n-m) \times m}
+$$
+
+L'approximation de Nyström construit une approximation de rang $m$ de $\mathbf{K}$ sans évaluer $\mathbf{K_{22}}$. Commençons par exprimer l'approximation de rang $m$ sous forme de matrices blocs.
+$$
+\mathbf{K} \approx
+\left[
+\begin{array}{c}
+\mathbf{U_1}  \\
+\mathbf{U_2}  \\
+\end{array}
+\right]
+\mathbf{\Lambda}
+\left[
+\begin{array}{c}
+\mathbf{U_1}  \\
+\mathbf{U_2}  \\
+\end{array}
+\right]^T
+=
+\left[
+\begin{array}{cc}
+\mathbf{U_1}\mathbf{\Lambda}\mathbf{U_1}^T & \mathbf{U_1}\mathbf{\Lambda}\mathbf{U_2}^T \\
+\mathbf{U_2}\mathbf{\Lambda}\mathbf{U_1}^T & \mathbf{U_2}\mathbf{\Lambda}\mathbf{U_2}^T \\
+\end{array}
+\right]
+\quad ; \quad
+\mathbf{U_1} \in \mathbb{R}^{m \times m}
+\quad ; \quad
+\mathbf{U_2} \in \mathbb{R}^{(n-m) \times m}
+$$
+
+Nous remarquons que $\mathbf{K_{11}} \approx \mathbf{U_1}\mathbf{\Lambda}\mathbf{U_1}^T$ et $\mathbf{K_{21}} \approx \mathbf{U_2}\mathbf{\Lambda}\mathbf{U_1}^T$.
+
+Nous souhaitons éviter d'avoir à évaluer $\mathbf{U_2}$ dans l'approximation de $\mathbf{K_{22}}$. Nous cherchons donc une expression de $\mathbf{U_2}$ en fonction d'autres termes.
+$$
+\begin{aligned}
+ & \mathbf{K_{21}} \approx \mathbf{U_2}\mathbf{\Lambda}\mathbf{U_1}^T \\
+= \{& \text{Multiplication des deux membres de l'égalité par un même terme non nul.} \} \\
+ & \mathbf{K_{21}} \left( \mathbf{\Lambda}\mathbf{U_1}^T \right)^{-1} \approx \mathbf{U_2}\mathbf{\Lambda}\mathbf{U_1}^T \left( \mathbf{\Lambda}\mathbf{U_1}^T \right)^{-1} \\
+= \{& \text{Algèbre linéaire. $\mathbf{U_1}$ est orthogonale donc $\mathbf{U_1}^{-1}=\mathbf{U_1}^T$} \} \\
+ & \mathbf{K_{21}} \mathbf{U_1} \mathbf{\Lambda}^{-1} \approx \mathbf{U_2}
+\end{aligned}
+$$
+
+Nous pouvons maintenant découvrir une approximation de $\mathbf{K_{22}}$ en fonction de celles de $\mathbf{K_{21}}$ et $\mathbf{K_{11}}$.
+$$
+\begin{aligned}
+ & \mathbf{K_{22}} \\
+\approx \{& \text{Définition de la décomposition en valeurs propres pour l'approximation de rang $m$ de $\mathbf{K}$} \} \\
+ & \mathbf{U_2}\mathbf{\Lambda}\mathbf{U_2}^T \\
+= \{& \text{Expression de $\mathbf{U_2}$ découverte ci-dessus.} \} \\
+ & \left(\mathbf{K_{21}} \mathbf{U_1} \mathbf{\Lambda}^{-1}\right)\mathbf{\Lambda}\left(\mathbf{K_{21}} \mathbf{U_1} \mathbf{\Lambda}^{-1}\right)^T \\
+= \{& \text{Algèbre linéaire.} \} \\
+ & \mathbf{K_{21}} \mathbf{U_1} \mathbf{\Lambda}^{-1} \mathbf{U_1}^T \mathbf{K_{21}}^T \\
+= \{& \text{Définition de $\mathbf{K_{11}}$ dans la décomposition en valeurs propres pour l'approximation de rang $m$ de $\mathbf{K}$} \} \\
+ & \mathbf{K_{21}} \mathbf{K_{11}}^{-1} \mathbf{K_{21}}^T \\
+= \{& \text{Algèbre linéaire.} \} \\
+ & \left(\mathbf{K_{21}} \mathbf{K_{11}}^{-1/2}\right) \left(\mathbf{K_{21}} \mathbf{K_{11}}^{-1/2}\right)^T
+\end{aligned}
+$$
+
+Ainsi, nous pouvons introduire une matrice $\boldsymbol\Phi$ de dimension $m$ telle que $\mathbf{K} \approx \boldsymbol\Phi \boldsymbol\Phi^T$.
+$$
+\boldsymbol\Phi =
+\left[
+\begin{array}{c}
+\mathbf{K_{11}}^{1/2}  \\
+\mathbf{K_{21}} \mathbf{K_{11}}^{-1/2}  \\
+\end{array}
+\right]
+$$
+
+## Calcul de l'approximation de Nyström
+
+Notons $\mathbf{C}$ la sélection des $m$ colonnes de $\mathbf{K}$.
+$$
+\mathbf{C} =
+\left[
+\begin{array}{c}
+\mathbf{K_{11}}  \\
+\mathbf{K_{21}}  \\
+\end{array}
+\right]
+$$
+
+Nous avons :
+$$
+\mathbf{C} \mathbf{K_{11}}^{-1} \mathbf{C}^T =
+\left[
+\begin{array}{c}
+\mathbf{I}  \\
+\mathbf{K_{21}} \mathbf{K_{11}}^{-1}  \\
+\end{array}
+\right]
+\left[
+\begin{array}{cc}
+\mathbf{K_{11}}^T & \mathbf{K_{21}}^T  \\
+\end{array}
+\right]
+=
+\left[
+\begin{array}{cc}
+\mathbf{K_{11}}^T & \mathbf{K_{21}}^T  \\
+\mathbf{K_{21}} & \mathbf{K_{21}} \mathbf{K_{11}}^{-1} \mathbf{K_{21}}^T \\
+\end{array}
+\right]
+\approx \mathbf{K}
+$$
+
+Nous pouvons donc calculer une approximation de rang $m$ de $\mathbf{K} \in \mathbb{R}^{n \times n}$ en ne calculant que $\mathbf{C} \in \mathbb{R}^{n \times m}$ (c'est-à-dire, $m$ colonnes de $\mathbf{K}$) et la décomposition en valeurs propres de $\mathbf{K_{11}} \in \mathbb{R}^{m \times m}$.
+$$
+\begin{aligned}
+ & \mathbf{K} \approx \mathbf{C} \mathbf{K_{11}}^{-1} \mathbf{C}^T \\
+= \{& \mathbf{K_{11}} = \mathbf{U}\boldsymbol\Sigma\mathbf{U}^T \} \\
+ & \mathbf{K} \approx \mathbf{C} \mathbf{U}\boldsymbol\Sigma^{-1}\mathbf{U}^T \mathbf{C}^T \\
+= \{& \mathbf{L} \triangleq \mathbf{C} \mathbf{U}\boldsymbol\Sigma^{-1/2} \} \\
+ & \mathbf{K} \approx \mathbf{L}\mathbf{L}^T
+\end{aligned}
+$$
+
+## Calcul de l'approximation de Nyström dans le cadre d'une régression ridge à noyau
+
+Dans le cadre de la régression ridge à noyau (voir un précédent module), nous notons : $\mathbf{G} = \mathbf{K} + \lambda\mathbf{I_n}$. Les coefficients du modèle ridge sont alors donnés par : $\boldsymbol\alpha_\lambda = \mathbf{G}^{-1} \mathbf{y}$. Nous cherchons à calculer efficacement $\mathbf{G}^{-1}$ à partir d'une approximation Nyström de rang $m$ de $\mathbf{K} \approx \mathbf{L}\mathbf{L}^T$. Pour ce faire, nous utilisons une forme de l'identité de Woodbury :
+$$
+\left(\mathbf{A} + \mathbf{U}\mathbf{C}\mathbf{V}\right)^{-1} = \mathbf{A}^{-1} - \mathbf{A}^{-1}\mathbf{U}\left(\mathbf{C}^{-1} + \mathbf{V}\mathbf{A}^{-1}\mathbf{U}\right)^{-1}\mathbf{V} \mathbf{A}^{-1}
+$$
+
+Nous obtenons ainsi :
+$$
+\begin{aligned}
+ & \mathbf{G}^{-1} \\
+= \{& \text{Définition de $\mathbf{G}$} \} \\
+ & \left(\lambda\mathbf{I_n} + \mathbf{K}\right)^{-1} \\
+\approx \{& \text{Approximation de Nyström} \} \\
+ & \left(\lambda\mathbf{I_n} + \mathbf{L}\mathbf{L}^T\right)^{-1} \\
+= \{& \text{Identité de Woodbury} \} \\
+ & \lambda^{-1}\mathbf{I_n} - \lambda^{-1}\mathbf{L}\left(\mathbf{I_m}+\lambda^{-1}\mathbf{L}^T\mathbf{L}\right)^{-1}\lambda^{-1}\mathbf{L}^T \\
+= \{& \text{Algèbre linéaire : si $\mathbf{A}$ et $\mathbf{B}$ sont des matrices carrés inversibles alors $(\mathbf{A}\mathbf{B})^{-1} = \mathbf{B}^{-1}\mathbf{A}^{-1}$} \} \\
+ & \lambda^{-1}\mathbf{I_n} - \lambda^{-1}\mathbf{L}\left(\lambda\mathbf{I_m}+\mathbf{L}^T\mathbf{L}\right)^{-1}\mathbf{L}^T \\
+\end{aligned}
+$$

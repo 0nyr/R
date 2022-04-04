@@ -1,0 +1,14 @@
+#!/bin/bash
+
+zip -r intro_to_ml_slides.zip \
+  02_moindres_carres_slides.pdf \
+  03_tikhonov_slides.pdf \
+  04_validation_croisee_slides.pdf \
+  05_b_svd_pca_slides.pdf \
+  05_presentation_svd_slides.pdf \
+  11_projecteurs_slides.pdf \
+  14_geometrie_ridge_svd_slides.pdf \
+  15_loocv_slides.pdf \
+  16_biais_variance_estimateur_slides.pdf \
+  18_kernel_ridge_regression_slides.pdf \
+  19_nystroem_approximation_slides.pdf

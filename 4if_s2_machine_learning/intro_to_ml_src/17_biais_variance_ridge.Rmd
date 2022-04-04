@@ -1,0 +1,173 @@
+# Biais et variance des paramètres d'une régression ridge
+
+## Biais des coefficients d'un modèle de régression ridge
+
+Nous rappelons l'expression de l'estimation des coefficients d'un modèle de régression ridge en fonction de la décomposition en valeurs singulières de la matrice des données.
+$$
+\text{SVD réduit : } \mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^T \quad
+       \mathbf{U} \in \mathbb{R}^{n \times r} \; , \;
+       \mathbf{D} \in \mathbb{R}^{r \times r} \; , \;
+       \mathbf{V} \in \mathbb{R}^{r \times p}
+$$
+\begin{equation}
+\hat{\boldsymbol\beta}_\lambda = \sum_{d_j>0} \mathbf{v_j} \frac{d_j}{d_j^2 + \lambda} \mathbf{u_j}^T\mathbf{y}
+\label{eq:beta-ridge-svd}
+\end{equation}
+Nous supposons que les données observées sont générées par un processus linéaire avec un bruit gaussien.
+\begin{equation}
+y_i = \mathbf{x_i}^T\boldsymbol\beta + \epsilon_i \quad \text{et} \quad \epsilon_i \sim \mathcal{N}(0,\sigma^2)
+\label{eq:processus-lineaire-bruit-gaussien}
+\end{equation}
+$\epsilon_i$ représente un bruit gaussien de moyenne nulle et de variance $\sigma^2$ supposée être identique pour chaque observation (hypothèse forte, dite d'homoscédasticité, elle s'impose souvent aux modèles de régression) et sans covariances entre observations (hypothèse d'indépendance).
+
+Nous calculons la moyenne des coefficients d'un modèle ridge sur l'ensemble des jeux de données qui peuvent être générés par ce modèle hypothétique.
+$$
+\begin{aligned}
+ & E\left[ \hat{\boldsymbol \beta}_\lambda \right] \\
+= \{& \text{Voir (\ref{eq:beta-ridge-svd}).} \} \\
+ & E \left[ \sum_{d_j>0} \frac{d_j}{d_j^2 + \lambda} \mathbf{v_j}\mathbf{u_j}^T\mathbf{y} \right] \\
+= \{& \text{(i) Hypothèse : seule $\mathbf{y}$ est une variable aléatoire.} \\
+\phantom{=}\phantom{\{}& y_i = \mathbf{x_i}^T\boldsymbol\beta + \epsilon_i \; \Rightarrow \; E[\mathbf{y}]=\mathbf{X}\boldsymbol\beta \\
+\phantom{=}\phantom{\{}& \text{Cette hypothèse n'est pas juste si la valeur de l'hyperparamètre $\lambda$ dépend des données.} \\
+\phantom{=}\phantom{\{}& \text{Par exemple, si la valeur de $\lambda$ est choisie par validation croisée.} \\
+\phantom{=}\phantom{\{}& \text{(ii) Linéarité de l'opérateur $E$.} \} \\
+ & \sum_{d_j>0} \frac{d_j}{d_j^2 + \lambda} \mathbf{v_j}\mathbf{u_j}^T\mathbf{X}\boldsymbol\beta \\
+= \{& \mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^T \\
+\phantom{=}\phantom{\{}& \text{$\mathbf{U}$ est orthogonale, $\mathbf{u_j}^T\mathbf{u_j}=1$ et $\mathbf{u_j}^T\mathbf{u_i}=0$ pour $i\neq j$} \} \\
+ & \sum_{d_j>0} \mathbf{v_j} \frac{d_j}{d_j^2 + \lambda} d_j \mathbf{v_j}^T\boldsymbol\beta \\
+\end{aligned}
+$$
+
+Puisque $\sum \mathbf{v_j}\mathbf{v_j}^T=\mathbf{V}^T\mathbf{V}=\mathbf{I}_p$, dans le cas de la régression non régularisée (i.e., $\lambda=0$), $\hat{\boldsymbol\beta}$ est un estimateur sans biais (i.e., $E[\hat{\boldsymbol\beta}]=\boldsymbol\beta$). Mais pour la régression ridge, l'estimateur $\hat{\boldsymbol\beta}_\lambda$ est porteur de biais, ses composantes sont biaisées vers $0$. Elles le sont d'autant plus le long des directions de faible variance du jeu de données d'entraînement (c'est-à-dire les direction avec un faible $d_j$).
+
+## Variance des coefficients d'un modèle de régression ridge
+
+Avant de calculer la variance des coefficients d'un modèle de régression ridge, nous dérivons une forme utile de la variance des coefficients d'un modèle de régression linéaire non régularisé, toujours sous hypothèse de données générées selon un processus linéaire avec bruit gaussien de moyenne nulle (voir équation \ref{eq:processus-lineaire-bruit-gaussien}).
+
+### Variance des coefficients d'un modèle de régression linéaire
+
+Nous utilisons la décomposition en valeurs singulières pour exprimer le modèle de l'équation \ref{eq:processus-lineaire-bruit-gaussien} en fonction d'une orthogonalisation de la matrice des données $\mathbf{X}$.
+$$
+\begin{aligned}
+ & \mathbf{y} = \mathbf{X}\boldsymbol\beta + \boldsymbol\epsilon \\
+= \{& \text{SVD: } \mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^T \} \\
+ & \mathbf{y} = \mathbf{U}\mathbf{D}\mathbf{V}^T\boldsymbol\beta + \boldsymbol\epsilon \\
+= \{& \boldsymbol\alpha\triangleq \mathbf{D}\mathbf{V}^T\boldsymbol\beta \} \\
+ & \mathbf{y} = \mathbf{U}\boldsymbol\alpha + \boldsymbol\epsilon \\
+\end{aligned}
+$$
+
+Nous calculons l'estimateur $\hat{\boldsymbol\alpha}$ du paramètre $\boldsymbol\alpha$ au sens des moindres carrés.
+$$
+\begin{aligned}
+ & \hat{\boldsymbol\alpha} \\
+= \{& \text{Estimateur au sens des moindres carrés.} \} \\
+ & \left(\mathbf{U}^T\mathbf{U}\right)^{-1}\mathbf{U}^T\mathbf{y} \\
+= \{& \text{$\mathbf{U}$ est orthogonale.} \} \\
+ &  \mathbf{U}^T\mathbf{y} \\
+= \{& \mathbf{y} = \mathbf{U}\boldsymbol\alpha + \boldsymbol\epsilon \} \\
+ &  \mathbf{U}^T\left(\mathbf{U}\boldsymbol\alpha + \boldsymbol\epsilon\right) \\
+= \{& \text{$\mathbf{U}$ est orthogonale.} \} \\
+ &  \boldsymbol\alpha + \mathbf{U}^T\boldsymbol\epsilon \\
+\end{aligned}
+$$
+
+Nous remarquons que $\hat{\boldsymbol\alpha}$ est un estimateur sans biais : $E[\hat{\boldsymbol\alpha}]=E[\boldsymbol\alpha]$. Nous nous y attendions car
+nous avons déjà montré plus haut que $\boldsymbol\beta$ est un estimateur sans biais (or $\boldsymbol\alpha$ est la "version de" $\boldsymbol\beta$ après orthogonalisation de $\mathbf{X}$).
+
+Calculons la variance de l'estimateur $\hat{\boldsymbol\alpha}$.
+$$
+\begin{aligned}
+ & Var(\hat{\alpha_j}) \\
+= \{& \text{Par définition de la variance.} \} \\
+ & E\left[\left(\hat{\alpha_j} - \alpha_j\right)^2\right] \\
+= \{& \text{Nous avons montré ci-dessus : } \hat{\boldsymbol\alpha} - \boldsymbol\alpha = \mathbf{U}^T\boldsymbol\epsilon \} \\
+ & E\left[\left(\sum_l u_{lj}\epsilon_j\right)^2\right] \\
+= \{& \text{Développement du produit.} \} \\
+ & E\left[\left(\sum_l \sum_t u_{lj}u_{tj}\epsilon_l\epsilon_t\right)^2\right] \\
+= \{& \text{Le bruit Gaussien $\boldsymbol\epsilon$ est de moyenne nulle, sans covariance et de variance $\sigma^2$.} \\
+\phantom{=}\phantom{\{}& E\left[\epsilon_l\epsilon_t\right] = 0 \text{ pour } l\neq t \\
+\phantom{=}\phantom{\{}& E\left[\epsilon^2\right] = \sigma^2 \\
+\phantom{=}\phantom{\{}& \text{Les $u$ ne sont pas des variables aléatoires et, par linéarité de l'espérance, peuvent sortir de sous $E$.} \} \\
+ & \left(\sum_l u_{lj}^2\right)\sigma^2 \\
+= \{& \text{Les vecteurs $\mathbf{u}$ sont unitaires.} \} \\
+ & \sigma^2 \\
+\end{aligned}
+$$
+
+Exprimons $\hat{\boldsymbol\beta}$ en fonction de $\hat{\boldsymbol\alpha}$ pour pouvoir ensuite trouver une expression de la variance $Var\left(\hat{\boldsymbol\beta}\right)$.
+$$
+\begin{aligned}
+ & \hat{\boldsymbol\alpha} = \mathbf{D}\mathbf{V}^T\hat{\boldsymbol\beta} \\
+= \{& \text{Hypothèse : $\mathbf{X}$ est de plein rang. Alors $\mathbf{V}^T$ est de dimension $p\times p$ avec $p$ le nombre de colonnes de $\mathbf{X}$.} \} \\
+ & \hat{\boldsymbol\beta} = (\mathbf{V}^T)^{-1}\mathbf{D}^{-1}\hat{\boldsymbol\alpha} \\
+= \{& \text{$\mathbf{V}$ est orthogonale.} \} \\
+ & \hat{\boldsymbol\beta} = \mathbf{V}\mathbf{D}^{-1}\hat{\boldsymbol\alpha} \\
+\end{aligned}
+$$
+
+D'où :
+$$
+\begin{aligned}
+ & Var\left(\hat{\boldsymbol\beta}\right) \\
+= \{& \text{Voir ci-dessus.} \} \\
+ & Var\left(\mathbf{V}\mathbf{D}^{-1}\hat{\boldsymbol\alpha}\right) \\
+= \{& \text{$\mathbf{V}\mathbf{D}^{-1}$ est orthogonale. Ses colonnes ont deux à deux des covariances nulles.} \} \\
+ & \left(\mathbf{V}\mathbf{D}^{-1}\right) Var\left(\hat{\boldsymbol\alpha}\right) \left(\mathbf{V}\mathbf{D}^{-1}\right)^T\\
+= \{& Var\left(\hat{\boldsymbol\alpha}\right) = \sigma^2 \} \\
+ & \sigma^2 \sum_{j=1}^{P} \frac{1}{d_j^2} \mathbf{v_j}\mathbf{v_j}^T \\
+\end{aligned}
+$$
+
+### Relation linéaire entre $\hat{\boldsymbol\beta}_\lambda$ et $\hat{\boldsymbol\beta}$
+
+Nous allons découvrir une relation linéaire entre $\hat{\boldsymbol\beta}_\lambda$ et $\hat{\boldsymbol\beta}$. Elle nous permettra ensuite de calculer $Var\left(\hat{\boldsymbol\beta}_\lambda\right)$ sous hypothèse du modèle génératif (\ref{eq:processus-lineaire-bruit-gaussien}).
+$$
+\begin{aligned}
+ & \hat{\boldsymbol\beta} \\
+= \{& \text{Équation normale d'un modèle linéaire non régularisé.} \} \\
+ & \left(\mathbf{X}^T\mathbf{X}\right)^{-1}\mathbf{X}^T\mathbf{y} \\
+= \{& \text{SVD : } \mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^T\} \\
+ & \left(\mathbf{V}\mathbf{D}\mathbf{U}^T\mathbf{U}\mathbf{D}\mathbf{V}^T\right)^{-1}\mathbf{V}\mathbf{D}\mathbf{U}^T\mathbf{y} \\
+= \{& \text{$\mathbf{U}$ est orthogonale, donc $\mathbf{U}^T\mathbf{U}=\mathbf{I}$ } \mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^T\} \\
+ & \left(\mathbf{V}\mathbf{D}^2\mathbf{V}^T\right)^{-1}\mathbf{V}\mathbf{D}\mathbf{U}^T\mathbf{y} \\
+= \{& \left(\mathbf{X}\mathbf{Y}\right)^{-1}=\mathbf{X}^{-1}\mathbf{Y}^{-1}\text{, $\mathbf{V}$ est orthogonale, donc $\mathbf{V}^{-1}=\mathbf{V}^T$ } \} \\
+ & \left(\mathbf{D}^2\mathbf{V}^T\right)^{-1}\mathbf{V}^T\mathbf{V}\mathbf{D}\mathbf{U}^T\mathbf{y} \\
+= \{& \text{Règles déjà utilisées ci-dessus.} \} \\
+ & \mathbf{V}\mathbf{D}^{-1}\mathbf{U}^T\mathbf{y} \\
+= \{& \text{Produit matricielle.} \} \\
+ & \sum_{d_j>0} \mathbf{v_j}\frac{1}{d_j}\mathbf{u_j}^T\mathbf{y} \\
+\end{aligned}
+$$
+
+De manière similaire, nous avions déjà calculé dans un précédent module une expression de $\hat{\boldsymbol\beta}_\lambda$ en fonction du SVD de
+$\mathbf{X}$.
+$$
+\hat{\boldsymbol\beta}_\lambda = \sum_{d_j>0} \mathbf{v_j}\frac{d_j}{d_j^2+\lambda}\mathbf{u_j}^T\mathbf{y}
+$$
+
+Ainsi, puisque
+$\frac{d_j}{d_j^2+\lambda}=\frac{d_j^2}{d_j^2+\lambda}\frac{1}{d_j}$, en notant
+$\mathbf{W}$ une matrice diagonale dont un j-ème élément sur la diagonale a pour
+valeur $\frac{d_j^2}{d_j^2+\lambda}$, nous avons découvert une relation linéaire
+entre $\hat{\boldsymbol\beta}_\lambda$ et $\hat{\boldsymbol\beta}$ :
+$$
+\hat{\boldsymbol\beta}_\lambda = \mathbf{W} \hat{\boldsymbol\beta}
+$$
+
+### Variance des coefficients d'un modèle de régression linéaire régularisée
+
+Toujours sous hypothèse du modèle génératif (\ref{eq:processus-lineaire-bruit-gaussien}), nous pouvons maintenant calculer une expression de la variance des coefficients d'un modèle de régression linéaire régularisée en fonction de la décomposition en valeurs singulières de la matrice des données.
+$$
+\begin{aligned}
+ & Var\left(\hat{\boldsymbol\beta}_\lambda\right) \\
+= \{& \hat{\boldsymbol\beta}_\lambda = \mathbf{W} \hat{\boldsymbol\beta} \text{, propriétés de l'opérateur Var.} \} \\
+ & \mathbf{W} Var\left(\hat{\boldsymbol\beta}\right) \mathbf{W}^T \\
+= \{& Var\left(\hat{\boldsymbol\beta}\right) = \sigma^2 \sum_{j=1}^{P} \frac{1}{d_j^2} \mathbf{v_j}\mathbf{v_j}^T \} \\
+ & \mathbf{W} \left[ \sigma^2 \sum_{d_j>0} \frac{1}{d_j^2} \mathbf{v_j}\mathbf{v_j}^T \right] \mathbf{W}^T \\
+= \{& \text{$\mathbf{W}$ est diagonale, de terme $\frac{d_j^2}{d_j^2+\lambda}$} \} \\
+ & \sigma^2 \sum_{d_j>0} \frac{d_j^2}{(d_j^2 + \lambda)^2} \mathbf{v_j}\mathbf{v_j}^T \\
+\end{aligned}
+$$
+
+La variance de l'estimateur $\hat{\boldsymbol\beta}_\lambda$ diminue uniformément suivant tous les axes principaux quand le paramètre $\lambda$, qui contrôle le degré de régularisation, augmente.

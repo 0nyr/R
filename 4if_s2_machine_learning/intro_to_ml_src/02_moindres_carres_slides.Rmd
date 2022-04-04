@@ -1,0 +1,54 @@
+---
+title: "02 Méthode des moindres carrés"
+author: Pierre-Edouard Portier
+date: mars 2022
+output: beamer_presentation
+---
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("02_moindres_carres.R", local = knitr::knit_global())
+```
+
+# Espace de fonctions
+
+- $f(\mathbf{x}) = \beta_1 f_1(\mathbf{x}) + \beta_2 f_2(\mathbf{x}) + \dots + \beta_p f_p(\mathbf{x})$
+- Jeu de données $\left\{ \mathbf{x^{(k)}},y^{(k)}\right\}_{k=1}^{n}$
+
+$$
+\left( \begin{array}{ccccc}
+f_1(\mathbf{x^{(1)}}) & f_2(\mathbf{x^{(1)}}) & \dots & f_p(\mathbf{x^{(1)}}) \\
+f_1(\mathbf{x^{(2)}}) & f_2(\mathbf{x^{(2)}}) & \dots & f_p(\mathbf{x^{(2)}}) \\
+\dots & \dots & \dots & \dots \\
+f_1(\mathbf{x^{(n)}}) & f_2(\mathbf{x^{(n)}}) & \dots & f_p(\mathbf{x^{(n)}})
+\end{array} \right)
+\left( \begin{array}{c}
+\beta_1 \\ \beta_2 \\ \dots \\ \beta_p
+\end{array} \right)
+=
+\left( \begin{array}{c}
+y^{(1)} \\ y^{(2)} \\ \dots \\ y^{(n)}
+\end{array} \right)
+$$
+
+- $\mathbf{X}\boldsymbol\beta = \mathbf{y}$
+- Par ex., $\mathbf{x} \in \mathbb{R}^1$ et $f_1(x)=1, f_2(x)=x, f_3(x)=x^2,\dots, f_p(x)=x^{p-1}$ (régression polynomiale)
+
+# Moindres carrés
+
+- Annuler la dérivée selon $\boldsymbol\beta$ de la fonction convexe $\|\mathbf{X}\boldsymbol\beta-\mathbf{y}\|^2_2$
+- $\|\mathbf{X}\boldsymbol\beta-\mathbf{y}\|^2_2 = \boldsymbol\beta^T\mathbf{X}^T\mathbf{X}\boldsymbol\beta - 2\boldsymbol\beta^T\mathbf{X}^T\mathbf{y} + \mathbf{y}^T\mathbf{y}$
+- $\mathbf{0} = 2\mathbf{X}^T\mathbf{X}\boldsymbol\beta - 2\mathbf{X}^T\mathbf{y} \quad \equiv \quad \mathbf{X}^T\mathbf{X} \boldsymbol\beta = \mathbf{X}^T\mathbf{y}$
+- $\hat{\boldsymbol\beta} = \left(\mathbf{X}^T\mathbf{X}\right)^{-1}\mathbf{X}^T\mathbf{y}$
+
+# Exemple pour un polynôme de degré $3$
+
+```{r, echo=FALSE}
+set.seed(1123)
+# Image par f d'un échantillon uniforme sur l'intervalle [0,1], avec ajout d'un
+# bruit gaussien de moyenne nulle et d'écart type 0.2
+data = gendat(10,0.2)
+coef = polyreg2(data,3)
+plt(data,f)
+pltpoly(coef)
+```

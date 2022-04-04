@@ -1,0 +1,93 @@
+# Plus grande valeur propre et puissance itérée
+
+Dans l'intention de comprendre plus tard comment calculer en pratique une décomposition en valeurs singulières, nous commençons par présenter la méthode dite de la puissance itérée pour calculer la plus grande valeur propre et son vecteur propre associé pour une matrice carrée.
+
+## Décomposition en valeurs propres d'une matrice carrée
+
+Dire que $\mathbf{u}$ est un vecteur propre de la matrice $\mathbf{A}$ associé à la valeur propre $\lambda$ signifie que $\mathbf{A}\mathbf{u}=\lambda\mathbf{u}$. Remarquons que tout multiple de $\mathbf{u}$ est également un vecteur propre associé à la même valeur propre $\lambda$. Considérons l'exemple de la matrice ci-dessous.
+\[
+\mathbf{A}=
+\left( \begin{array}{cccc}
+1 & 2 & 0 \\
+2 & 1 & 0 \\
+0 & 0 & -1
+\end{array} \right)
+\]
+Notons $\mathbf{e_1}^T=(1 \; 0 \; 0)$, $\mathbf{e_2}^T=(0 \; 1 \; 0)$ et $\mathbf{e_3}^T=(0 \; 0 \; 1)$. Nous avons :
+
+\begin{align*}
+\mathbf{A}\mathbf{e_3} &= -\mathbf{e_3} \\
+\mathbf{A}(\mathbf{e_1}+\mathbf{e_2}) &= 3(\mathbf{e_1}+\mathbf{e_2}) \\
+\mathbf{A}(\mathbf{e_1}-\mathbf{e_2}) &= -(\mathbf{e_1}-\mathbf{e_2}) \\
+\end{align*}
+
+Nous observons en particulier que la valeur propre $-1$ est associée à deux vecteurs propres linéairement indépendants : $\mathbf{e_3}$ et $(\mathbf{e_1}-\mathbf{e_2})$.
+
+## Plus grande valeur propre et méthode de la puissance itérée
+
+Posons $\mathbf{A}\in\mathbb{R}^{N\times N}$ et $\mathbf{u^{(0)}}\in\mathbb{R}^N$ avec $\|\mathbf{u^{(0)}}\|=1$. Supposons que $\mathbf{u^{(0)}}$ puisse se décomposer en une somme de vecteurs propres de $\mathbf{A}$.
+
+\begin{align*}
+\mathbf{u^{(0)}} &= \mathbf{u_1}+\mathbf{u_2}+\dots +\mathbf{u_r} \\
+\text{Avec } \mathbf{A}\mathbf{u_i} &= \lambda_i \mathbf{u_i}\\
+\end{align*}
+
+Considérons la séquence $\mathbf{u^{(0)}}, \mathbf{A}\mathbf{u^{(0)}}, \mathbf{A}^2\mathbf{u^{(0)}}, \dots$. Nous avons :
+
+\begin{equation}
+\mathbf{A}^m\mathbf{u^{(0)}} = \lambda_1^m \mathbf{u_1} + \lambda_2^m \mathbf{u_2} + \dots + \lambda_r^m \mathbf{u_r}
+\label{eq:1}
+\end{equation}
+
+Supposons par ailleurs que les valeurs propres soient ordonnées et que la première valeur propre soit strictement la plus grande en valeur absolue : $|\lambda_1|>|\lambda_2|\geq\dots\geq|\lambda_r|$. En divisant les deux membres de l'égalité (\ref{eq:1}) par $\lambda_1^m$, nous avons :
+\[
+(\lambda_1^{-1}\mathbf{A})^m\mathbf{u^{(0)}}=\mathbf{u_1} + \sum_{i=2}^{r}\left(\frac{\lambda_i}{\lambda_1}\right)^m\mathbf{u_i}
+\]
+Or, $\left|\frac{\lambda_i}{\lambda_1}\right|<1$ pour $i=2,\dots,r$, donc nous pouvons conclure :
+\[
+\lim\limits_{m \to \infty}(\lambda_1^{-1}\mathbf{A})^m\mathbf{u^{(0)}}=\mathbf{u_1}
+\]
+
+En résumé, si $\mathbf{u^{(0)}}$ peut s'écrire comme une somme de vecteurs propres de $\mathbf{A}$ et que la valeur propre $\lambda_1$ associée au vecteur propre $\mathbf{u_1}$ est plus grande en valeur absolue que les autres valeurs propres, alors, à un facteur multiplicatif près, $\mathbf{A}^m\mathbf{u^{(0)}}$ converge vers le vecteur propre $\mathbf{u_1}$.
+
+Pour gérer ce facteur multiplicatif, nous considérons la séquence suivante :
+\[
+\mathbf{w^{(k)}}=\mathbf{A}\mathbf{u^{(k-1)}} \quad ; \quad \mathbf{u^{(k)}}=\frac{\mathbf{w^{(k)}}}{\|\mathbf{w^{(k)}}\|} \quad ; \quad \lambda^{(k)}=\mathbf{u^{(k)}}^T(\mathbf{A}\mathbf{u^{(k)}})
+\]
+
+Par induction, nous obtenons :
+
+\begin{align*}
+ & \mathbf{u^{(k)}} \\
+= \{& \gamma_k = \| \lambda_1^k\mathbf{u_1} + \sum_{j=2}^{r} \lambda_j^k\mathbf{u_j} \| \} \\
+ & \frac{1}{\gamma_k} \left(\lambda_1^k\mathbf{u_1} + \sum_{j=2}^{r} \lambda_j^k\mathbf{u_j}\right) \\
+= \phantom{\{}& \\
+ & \frac{\lambda_1^k}{\gamma_k} \left(\mathbf{u_1} + \sum_{j=2}^{r} \left(\frac{\lambda_j}{\lambda_1}\right)^k \mathbf{u_j}\right) \\
+\end{align*}
+
+Par ailleurs, $\mathbf{u^{(k)}}$ étant à chaque itération normalisé, nous avons :
+
+\begin{align*}
+ & \|\mathbf{u^{(k)}}\| = 1 \\
+= \phantom{\{}& \\
+ & \frac{|\lambda_1^k|}{\gamma_k} = \frac{1}{\|\mathbf{u_1} + \sum_{j=2}^{r} \left(\frac{\lambda_j}{\lambda_1}\right)^k \mathbf{u_j}\|}
+\end{align*}
+
+D'où :
+\[
+\lim\limits_{k \to \infty} \frac{|\lambda_1^k|}{\gamma_k} = \frac{1}{\|\mathbf{u_1}\|}
+\]
+
+Finalement :
+
+\[
+\lim\limits_{k \to \infty} \mathbf{u^{(k)}} = \frac{\mathbf{u_1}}{\|\mathbf{u_1}\|}
+\]
+
+Et :
+
+\begin{align*}
+ & \lim\limits_{k \to \infty} \mathbf{u^{(k)}}^T(\mathbf{A}\mathbf{u^{(k)}}) \\
+= \{& \mathbf{A}\mathbf{u_1}=\lambda_1\mathbf{u_1} \} \\
+ & \lambda_1 \\
+\end{align*}

@@ -1,0 +1,12 @@
+---
+title: "Introduction au Machine Learning"
+author: "Pierre-Edouard Portier"
+documentclass: book
+geometry: margin=2cm
+fontsize: 12pt
+date: "Mars 2022"
+toc: true
+classoption: fleqn
+bibliography: intro_to_ml.bib
+link-citations: yes
+---

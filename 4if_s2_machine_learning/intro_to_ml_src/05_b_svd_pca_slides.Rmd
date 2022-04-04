@@ -1,0 +1,233 @@
+---
+title: "05-b SVD et Analyse en Composantes Principales"
+author: Pierre-Edouard Portier
+date: mars 2022
+output:
+  beamer_presentation:
+    incremental: false
+---
+
+# Projection sur les axes principaux
+
+>- $\mathbf{X}\in\mathbb{R}^{n \times p} \quad ; \quad \mathbf{X} = \sum_{\alpha}\sqrt{\lambda_\alpha}\mathbf{u_\alpha}\mathbf{v_\alpha}^T \quad\equiv\quad \mathbf{X} = \mathbf{U} \mathbf{D} \mathbf{V}^T$
+>- Coordonnées (facteurs) des observations sur les axes principaux $\mathbf{F} \triangleq \mathbf{X}\mathbf{V} = \mathbf{U} \mathbf{D} \mathbf{V}^T\mathbf{V} = \mathbf{U} \mathbf{D}$
+>- Covariance des facteurs $\left(\mathbf{U} \mathbf{D}\right)^T\left(\mathbf{U} \mathbf{D}\right) = \mathbf{D}^2$
+  >- Les facteurs sont orthogonaux (par construction)
+  >- $\lambda_\alpha = \sum_i f_{i,\alpha}^2$ est la variance expliquée par l'axe $\mathbf{v_\alpha}$
+>- Contribution des observations aux axes $CTR_{i,\alpha} = \frac{f_{i,\alpha}^2}{\sum_i f_{i,\alpha}^2} = \frac{f_{i,\alpha}^2}{\lambda_\alpha}$
+  >- $\sum_i CTR_{i,\alpha} = 1$ et $\mathbf{x_i}$ pèse sur $\mathbf{v_\alpha}$ quand $CTR_{i,\alpha} \geq 1/n$
+>- Contribution des axes aux observations $COS2_{i,\alpha} = \frac{f_{i,\alpha}^2}{\sum_\alpha f_{i,\alpha}^2} = \frac{f_{i,\alpha}^2}{d_{i,g}^2}$
+  >- $d_{i,g}^2 = \sum_j \left(x_{i,j}-g_j\right)^2$ ($\sum_j x_{i,j}^2$ si données centrées)
+  >- $\sum_i d_{i,g}^2 = \mathcal{I} = \sum_\alpha \lambda_\alpha$
+>- Contribution des variables aux axes $VARCTR_{j,\alpha} = \left(\frac{\lambda_\alpha}{\sqrt{n-1}}\mathbf{v_\alpha}\right)^2$
+
+# Exemple `abalone`
+
+## Récupération du jeu de données
+
+```{r cache=TRUE}
+abalone.cols = c("sex", "length", "diameter", "height",
+                 "whole.wt", "shucked.wt", "viscera.wt",
+                 "shell.wt", "rings")
+
+url <- 'http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data'
+abalone <- read.table(url, sep=",", row.names=NULL,
+                      col.names=abalone.cols,
+                      nrows=4177)
+abalone <- subset(abalone, height!=0)
+```
+
+## Sélection des variables explicatives numériques
+
+```{r}
+X <- abalone[,c("length", "diameter", "height", "whole.wt",
+                "shucked.wt", "viscera.wt", "shell.wt")]
+```
+
+# Exemple `abalone`
+
+## Standardisation
+
+```{r}
+standard <- function(X) {
+  meanX <- apply(X, 2, mean);
+  sdX <- apply(X, 2, sd);
+  Y <- sweep(X, 2, meanX, FUN = "-");
+  Y <- sweep(Y, 2, sdX, FUN = "/");
+  res <- list("X" = Y, "meanX" = meanX, "sdX" = sdX)
+}
+```
+
+# Exemple `abalone`
+
+## Clustering
+
+```{r warning=FALSE}
+set.seed(1123)
+std.X <- standard(X)
+A <- std.X$X
+nbClust <- 100
+clst <- kmeans(A, nbClust, nstart = 25)
+```
+
+# Exemple `abalone`
+
+## SVD des centres des clusters
+
+```{r}
+std.centers <- standard(clst$centers)
+C <- std.centers$X
+svd.C <- svd(C)
+```
+
+## Pourcentage de variance expliquée par chaque axe principal
+
+```{r}
+round((svd.C$d^2 / sum(svd.C$d^2))*100, 2)
+```
+
+# Exemple `abalone`
+
+## Facteurs et contributions des observations aux axes
+
+- $\mathbf{F} \triangleq \mathbf{X}\mathbf{V} = \mathbf{U} \mathbf{D} \mathbf{V}^T\mathbf{V} = \mathbf{U} \mathbf{D}$
+- $CTR_{i,\alpha} = \frac{f_{i,\alpha}^2}{\sum_i f_{i,\alpha}^2} = \frac{f_{i,\alpha}^2}{\lambda_\alpha}$
+
+```{r}
+fact <- svd.C$u %*% diag(svd.C$d)
+fact2 <- fact^2
+ctr <- sweep(fact2, 2, colSums(fact2), "/")
+```
+
+# Exemple `abalone`
+
+## Affichage des observations importantes pour les deux premiers axes principaux
+
+```{r, eval=FALSE}
+n <- dim(fact)[1]
+d1BestCtr <- which(ctr[,1] > 1/n)
+d2BestCtr <- which(ctr[,2] > 1/n)
+d1d2BestCtr <- union(d1BestCtr,d2BestCtr)
+plot(fact[d1d2BestCtr,1], fact[d1d2BestCtr,2], pch="")
+text(fact[d1d2BestCtr,1], fact[d1d2BestCtr,2],
+     d1d2BestCtr, cex=0.8)
+```
+
+# Exemple `abalone`
+
+```{r, echo=FALSE}
+n <- dim(fact)[1]
+d1BestCtr <- which(ctr[,1] > 1/n)
+d2BestCtr <- which(ctr[,2] > 1/n)
+d1d2BestCtr <- union(d1BestCtr,d2BestCtr)
+plot(fact[d1d2BestCtr,1], fact[d1d2BestCtr,2], pch="")
+text(fact[d1d2BestCtr,1], fact[d1d2BestCtr,2],
+     d1d2BestCtr, cex=1)
+```
+
+# Exemple `abalone`
+
+```{r}
+f2.max <- which.max(abs(fact[,2]))
+f2.max.size <- clst$size[f2.max]
+f2.max.name <- names(clst$cluster[clst$cluster==f2.max])
+f2.max.ctr <- round(ctr[f2.max,2]*100, 2)
+```
+
+- Le cluster `r f2.max` explique `r f2.max.ctr` % de la variance du second axe.
+- Il est composé de `r f2.max.size` élément
+
+```{r}
+abalone[f2.max.name,]
+```
+
+# Exemple `abalone`
+
+## Nouvelle analyse
+
+```{r, warning=FALSE}
+abalone <- abalone[!(row.names(abalone) %in% f2.max.name),]
+X <- abalone[,c("length", "diameter", "height", "whole.wt","shucked.wt", "viscera.wt",
+                "shell.wt")]
+std.X <- standard(X)
+A <- std.X$X
+nbClust <- 100
+clst <- kmeans(A, nbClust, nstart = 25)
+std.centers <- standard(clst$centers)
+C <- std.centers$X
+svd.C <- svd(C)
+round((svd.C$d^2 / sum(svd.C$d^2))*100, 2)
+```
+
+# Exemple `abalone`
+
+## Nouvelle analyse (suite) et affichage des observations sur les deux premiers axes
+
+```{r}
+fact <- svd.C$u %*% diag(svd.C$d)
+fact2 <- fact^2
+ctr <- sweep(fact2, 2, colSums(fact2), "/")
+n <- dim(fact)[1]
+d1BestCtr <- which(ctr[,1] > 1/n)
+d2BestCtr <- which(ctr[,2] > 1/n)
+d1d2BestCtr <- union(d1BestCtr,d2BestCtr)
+```
+
+```{r, eval=FALSE}
+plot(fact[d1d2BestCtr,1], fact[d1d2BestCtr,2], pch="")
+text(fact[d1d2BestCtr,1], fact[d1d2BestCtr,2],
+     d1d2BestCtr, cex=0.8)
+```
+
+# Exemple `abalone`
+
+```{r, echo=FALSE}
+plot(fact[d1d2BestCtr,1], fact[d1d2BestCtr,2], pch="")
+text(fact[d1d2BestCtr,1], fact[d1d2BestCtr,2], d1d2BestCtr, cex=0.8)
+```
+
+# Exemple `abalone`
+
+## Un cluster intrigant...
+
+```{r}
+intrig<-43
+intrig.name <- names(clst$cluster[clst$cluster==intrig])
+abalone[intrig.name,]
+```
+
+# Exemple `abalone`
+
+## Un cluster intrigant...
+
+```{r}
+boxplot(abalone$height)
+```
+
+# Exemple `abalone`
+
+## Un cluster intrigant...
+
+- Contributions des axes aux écarts des observations au centre d'inertie $COS2_{i,\alpha} = \frac{f_{i,\alpha}^2}{\sum_\alpha f_{i,\alpha}^2} = \frac{f_{i,\alpha}^2}{d_{i,g}^2}$
+
+```{r}
+cos2 <- sweep(fact2, 1, rowSums(fact2), "/")
+round(cos2[intrig,]*100,2)
+```
+
+- Observation intrigante toute expliquée par les deux premiers axes.
+- Pas de risque à considérer comme significatif son écart à l'origine.
+
+# Exemple `abalone`
+
+## Contributions des variables aux axes principaux
+
+- $VARCTR_{j,\alpha} = \left(\frac{\lambda_\alpha}{\sqrt{n-1}}\mathbf{v_\alpha}\right)^2$
+
+```{r}
+varctr <- ((svd.C$v %*% diag(svd.C$d))/sqrt(n-1))^2
+rownames(varctr) <- colnames(X)
+round(varctr,2)
+```
+
+- Variables très corrélées qui pèsente toutes fortement sur la variance expliquée par l'axe 1

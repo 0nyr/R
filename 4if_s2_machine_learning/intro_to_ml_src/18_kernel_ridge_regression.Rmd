@@ -1,0 +1,254 @@
+# Régression ridge à noyau
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("04_validation_croisee.R", local = knitr::knit_global())
+source("18_kernel_ridge_regression.R", local = knitr::knit_global())
+```
+
+## Noyau gaussien
+
+Soit un jeu de données :
+$$
+(\mathbf{x_i},y_i) \quad \text{avec} \quad i=1,\dots,n \quad ; \quad y_i \in \mathbb{R} \quad ; \quad \mathbf{x_i} \in \mathbb{R}^d
+$$
+
+Nous appelons \emph{noyau} une mesure de similarité entre points :
+$$
+k: \mathbb{R}^d \times \mathbb{R}^d \rightarrow \mathbb{R}
+$$
+
+La similarité peut, par exemple, être représentée par une fonction gaussienne :
+$$
+k(\mathbf{x_j},\mathbf{x_i}) = exp\left(-\frac{1}{\sigma^2}\|\mathbf{x_j}-\mathbf{x_i}\|^2\right)
+$$
+Avec $\|\mathbf{x_j}-\mathbf{x_i}\|$ la distance euclidienne entre observations. Nous traçons ci-dessous la forme de cette décroissance exponentielle. Lorsque la distance entre $\mathbf{x_j}$ et $\mathbf{x_i}$ est nulle, la similarité est maximale et vaut $1$.
+
+```{r}
+d <- seq(from=0, to=5, by=0.1)
+k <- function(sigma,d){exp(-(1/sigma^2)*d^2)}
+plot(x=d, y=k(1,d), type="l")
+```
+
+Nous proposons ensuite de représenter la relation entre les observations et la cible par une combinaison linéaire des similarités d'une nouvelle observation $\mathbf{x}$ avec chaque observation du jeu d'entraînement :
+\begin{equation}
+f(\mathbf{x}) = \sum_{i=1}^{n} \alpha_i k(\mathbf{x},\mathbf{x_i})
+\label{eq:1}
+\end{equation}
+Plus $\mathbf{x}$ est proche de $\mathbf{x_i}$, plus $\mathbf{x_i}$ pèse dans le calcul de la valeur prédite pour $\mathbf{x}$.
+Chaque $k(\cdot,\mathbf{x_i})$ est une fonction gaussienne et $f$ est une superposition de fonctions gaussiennes.
+Nous proposons une illustration d'une telle superposition.
+
+```{r}
+set.seed(1123)
+npts <- 8
+xi <- runif(npts, min=0, max=5)
+ci <- rnorm(npts)
+xs <- seq(from=0, to=5, by=0.1)
+fi <- function(ci,xi) function(x) ci * exp(-(x-xi)^2)
+call_f <- function(f,...) f(...)
+m <- t(matrix(unlist(lapply(Map(fi,ci,xi), call_f, xs)), nrow=npts, byrow=TRUE))
+g <- rowSums(m)
+plot(xs, g, type="l", lty="solid", ylim=range(cbind(g,m)))
+matplot(xs, m, type="l", lty="dotted", col=1, add=TRUE)
+points(x=xi, y=rep(0,npts))
+```
+
+Cette approche est qualifiée de \emph{non paramétrique} car elle s'adapte aux données au lieu de chercher à adpater les paramètres d'une forme fonctionnelle fixée a priori comme nous le faisions auparavant dans le cas de la régression régularisée.
+
+## Régression ridge à noyau
+
+Nous montrons que l'approche non paramétrique introduite ci-dessus peut se présenter sous la forme d'une régression ridge après transformation des variables $\mathbf{x_i}$ par une fonction $\phi$.
+$$
+\begin{aligned}
+\mathbf{X} &\in \mathbb{R}^{n\times d} \\
+\hat{\boldsymbol\beta} &= (\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{y} \quad \text{Régression normale} \\
+\hat{\boldsymbol\beta}_\lambda &= \left(\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I}_d\right)^{-1}\mathbf{X}^T\mathbf{y} \quad \text{Régression ridge} \\
+\phi &: \mathbb{R}^d \rightarrow \mathbb{R}^k \quad \text{avec } 1 \leq k \leq +\infty \\
+\mathbf{\Phi} &= \left[ \phi(\mathbf{x_1}),\dots, \phi(\mathbf{x_n}) \right] \in \mathbb{R}^{n\times k}
+\end{aligned}
+$$
+
+Nous introduisons une variante de \emph{l'identité de Woodbury} qui sera utile au calcul des coefficients de la régression ridge après application de $\phi$.
+$$
+\begin{aligned}
+ & \text{Identité de Woodbury} \\
+= \{& \text{\url{https://en.wikipedia.org/wiki/Woodbury_matrix_identity}} \} \\
+ & (\mathbf{I} + \mathbf{U}\mathbf{V})^{-1}\mathbf{U} = \mathbf{U}(\mathbf{I} + \mathbf{V}\mathbf{U})^{-1} \\
+= \{& \text{Algèbre} \} \\
+ & \frac{\lambda}{\lambda}(\mathbf{I} + \mathbf{U}\mathbf{V})^{-1}\mathbf{U} = \frac{\lambda}{\lambda}\mathbf{U}(\mathbf{I} + \mathbf{V}\mathbf{U})^{-1} \\
+= \{& \left(\lambda\mathbf{X}\right)^{-1} = \lambda^{-1}\mathbf{X}^{-1} \} \\
+ & (\lambda\mathbf{I} + \lambda\mathbf{U}\mathbf{V})^{-1}\lambda\mathbf{U} = \lambda\mathbf{U}(\lambda\mathbf{I} + \mathbf{V}\lambda\mathbf{U})^{-1} \\
+= \{& \mathbf{W} = \lambda\mathbf{U} \} \\
+ & (\lambda\mathbf{I} + \mathbf{W}\mathbf{V})^{-1}\mathbf{W} = \mathbf{W}(\lambda\mathbf{I} + \mathbf{V}\mathbf{W})^{-1} \\
+= \{& \mathbf{W} =\mathbf{\Phi}^T \quad ; \quad \mathbf{V} =\mathbf{\Phi} \} \\
+ & (\mathbf{\Phi}^T\mathbf{\Phi} + \lambda\mathbf{I_k})^{-1}\mathbf{\Phi}^T = \mathbf{\Phi}^T(\mathbf{\Phi}\mathbf{\Phi}^T + \lambda\mathbf{I_n})^{-1}
+\end{aligned}
+$$
+
+Nous calculons maintenant les coefficients d'une régression ridge après application de la transformation $\phi$.
+\begin{equation}
+\begin{aligned}
+ & \hat{\boldsymbol\beta}_\lambda = \left(\mathbf{\Phi}^T\mathbf{\Phi} + \lambda \mathbf{I_k}\right)^{-1}\mathbf{\Phi}^T\mathbf{y} \\
+= \{& \text{Identité de Woodbury, voir ci-dessus.} \} \\
+ & \hat{\boldsymbol\beta}_\lambda = \mathbf{\Phi}^T\left(\mathbf{\Phi}\mathbf{\Phi}^T + \lambda \mathbf{I_n}\right)^{-1}\mathbf{y} \\
+= \{& \mathbf{\alpha} = \left(\mathbf{\Phi}\mathbf{\Phi}^T + \lambda \mathbf{I_n}\right)^{-1}\mathbf{y} \} \\
+ & \hat{\boldsymbol\beta}_\lambda = \sum_{i=1}^{n} \alpha_i \phi(\mathbf{x_i}) \\
+\label{eq:2}
+\end{aligned}
+\end{equation}
+
+Nous calculons la prédiction $\hat{y}$ que ce modèle associe à une observation $\mathbf{x}$.
+$$
+\begin{aligned}
+ & \hat{y} = \phi(\mathbf{x})^T \hat{\boldsymbol\beta}_\lambda \\
+= \{& \text{Voir } (\ref{eq:2}) \} \\
+ & \hat{y} = \sum_{i=1}^{n} \alpha_i \phi(\mathbf{x})^T \phi(\mathbf{x_i}) \\
+= \{& k(\mathbf{x},\mathbf{y}) = \phi(\mathbf{x})^T\phi(\mathbf{y}) \} \\
+ & \hat{y} = \sum_{i=1}^{n} \alpha_i k(\mathbf{x},\mathbf{x_i}) \\
+\end{aligned}
+$$
+Nous retrouvons l'équation (\ref{eq:1}). Nous pouvons écrire ce résultat sous forme matricielle en introduisant la matrice noyau $\mathbf{K}$.
+$$
+\begin{aligned}
+ & \hat{y} = \sum_{i=1}^{n} \alpha_i k(\mathbf{x},\mathbf{x_i}) \\
+= \{& K_{ij} = \phi(\mathbf{x_i})^T\phi(\mathbf{x_j}) \quad ; \quad \mathbf{k(x)} = \left[  k(\mathbf{x},\mathbf{x_1}),\dots, k(\mathbf{x},\mathbf{x_n})\right] \} \\
+ & \hat{y} = \mathbf{k(x)}^T \left( \mathbf{K} + \lambda \mathbf{I_n} \right)^{-1} \mathbf{y}
+\end{aligned}
+$$
+Ainsi, l'approche non paramétrique par juxtaposition des similarités d'une observation avec chaque observation du jeu d'entraînement correspond à une régression ridge après application de la transformation $\phi$ aux observations. Nous remarquons qu'il n'est pas nécessaire d'opérer explicitement cette transformation, seules sont nécessaires les valeurs des produits scalaires $\phi(\mathbf{x_i})^T\phi(\mathbf{x_j})$. En fait, l'application explicite de la transformation $\phi$ serait souvent impossible. Par exemple, dans le cas d'un noyau gaussien, $\phi$ projette vers un espace de dimension infinie...
+
+## Calcul des paramètres de la régression ridge à noyau
+
+Notons $\mathbf{G} \triangleq \mathbf{K} + \lambda \mathbf{I_n}$. Nous venons de montrer :
+\begin{equation}
+\boldsymbol\alpha_\lambda = \mathbf{G}^{-1} \mathbf{y}
+\label{eq:3}
+\end{equation}
+\begin{equation}
+\mathbf{\hat{y}} = \mathbf{K}\mathbf{G}^{-1} \mathbf{y}
+\label{eq:4}
+\end{equation}
+
+Nous calculons une expression de $\boldsymbol\alpha_\lambda$ en fonction de la décomposition en valeurs propres $\mathbf{K}=\mathbf{Q}\mathbf{\Lambda}\mathbf{Q}^T$.
+$$
+\begin{aligned}
+ & \mathbf{G} \\
+= \{& \text{Par définition.} \} \\
+ & \mathbf{K} + \lambda \mathbf{I_n} \\
+= \{& \mathbf{K}=\mathbf{Q}\mathbf{\Lambda}\mathbf{Q}^T \} \\
+ & \mathbf{Q}\mathbf{\Lambda}\mathbf{Q}^T + \lambda \mathbf{I_n} \\
+= \{& \text{Algèbre linéaire.} \} \\
+ & \mathbf{Q} \left( \mathbf{\Lambda} + \lambda \mathbf{I_n} \right) \mathbf{Q}^T
+\end{aligned}
+$$
+D'où :
+$$
+\begin{aligned}
+ & \mathbf{G}^{-1} \\
+= \{& \mathbf{G} = \mathbf{Q} \left( \mathbf{\Lambda} + \lambda \mathbf{I_n} \right) \mathbf{Q}^T \\
+\phantom{=}\phantom{\{}& \mathbf{Q}^{-1} = \mathbf{Q}^T \text{ car $\mathbf{Q}$ est orthogonale.} \} \\
+ & \mathbf{Q} \left( \mathbf{\Lambda} + \lambda \mathbf{I_n} \right)^{-1} \mathbf{Q}^T
+\end{aligned}
+$$
+Enfin :
+$$
+\boldsymbol\alpha_\lambda = \mathbf{Q} \left( \mathbf{\Lambda} + \lambda \mathbf{I_n} \right)^{-1} \mathbf{Q}^T \mathbf{y}
+$$
+Ainsi, après avoir effectuée la décomposition en valeurs propres de $\mathbf{K}$ en $\mathcal{O}(n^3)$, le calcul de $\boldsymbol\alpha_\lambda$ pour une valeur $\lambda$ donnée se fait en $\mathcal{O}(n^2)$.
+
+## LOOCV pour le choix de l'hyper-paramètre $\lambda$
+
+Pour la régression ridge, nous avons découvert une forme de la validation croisée un-contre-tous (LOOCV) qui peut être calculée à partir d'un seul calcul des paramètres sur tout le jeu d'entraînement :
+$$
+LOO_\lambda = \frac{1}{n} \sum_{i=1}^{n} \left( \frac{y_i - \hat{y_{\lambda_i}}}{1 - h_i} \right)^2
+$$
+Avec $h_i$ le i-ème élément sur la diagonale de la matrice chapeau.
+
+Le même raisonnement nous mène à découvrir une expression similaire pour la régression ridge à noyau :
+$$
+LOO_\lambda = \frac{1}{n} \sum_{i=1}^{n} \left( \frac{y_i - \left(\mathbf{K}\mathbf{G}^{-1} \mathbf{y}\right)_i}{1 - \left(\mathbf{K}\mathbf{G}^{-1}\right)_{ii}} \right)^2
+$$
+
+Nous simplifions l'expression $\mathbf{K}\mathbf{G}^{-1}$ en utilisant la décomposition en éléments propres de $\mathbf{K}$.
+$$
+\begin{aligned}
+ & \mathbf{K}\mathbf{G}^{-1} \\
+= \{& \text{Décomposition en éléments propres de $\mathbf{K}$} \} \\
+ & \mathbf{Q}\mathbf{\Lambda}\mathbf{Q}^T \mathbf{Q} \left( \mathbf{\Lambda} + \lambda \mathbf{I_n} \right)^{-1} \mathbf{Q}^T \\
+= \{& \text{$\mathbf{Q}$ est orthogonale, donc $\mathbf{Q}^T\mathbf{Q} = \mathbf{I}$} \} \\
+ & \mathbf{Q}\mathbf{\Lambda}\left( \mathbf{\Lambda} + \lambda \mathbf{I_n} \right)^{-1} \mathbf{Q}^T \\
+= \{& \text{Astuce arithmétique pour faire apparaître une simplification.} \} \\
+ & \mathbf{Q}\left(\mathbf{\Lambda} + \lambda \mathbf{I_n} - \lambda \mathbf{I_n}\right)\left( \mathbf{\Lambda} + \lambda \mathbf{I_n} \right)^{-1} \mathbf{Q}^T \\
+= \{& \text{$\left(\mathbf{\Lambda} + \lambda \mathbf{I_n} - \lambda \mathbf{I_n}\right)$ et $\left( \mathbf{\Lambda} + \lambda \mathbf{I_n} \right)^{-1}$ sont des matrices diagonales.} \\
+\phantom{=}\phantom{\{}& \text{$+$ et $\times$ sont des opérateurs commutatifs et associatifs pour les matrices diagonales.} \\
+\phantom{=}\phantom{\{}& \mathbf{G}^{-1} = \mathbf{Q} \left( \mathbf{\Lambda} + \lambda \mathbf{I_n} \right)^{-1} \mathbf{Q}^T\} \\
+ & \mathbf{I_n} - \lambda\mathbf{G}^{-1} \\
+\end{aligned}
+$$
+
+Nous simplifions le numérateur de $LOO_\lambda$ :
+$$
+\begin{aligned}
+ & y_i - \left(\mathbf{K}\mathbf{G}^{-1} \mathbf{y}\right)_i \\
+= \{& \mathbf{K}\mathbf{G}^{-1} = \mathbf{I_n} - \lambda\mathbf{G}^{-1} \} \\
+ & \left( \lambda\mathbf{G}^{-1}\mathbf{y} \right)_i
+\end{aligned}
+$$
+
+Nous simplifions le dénominateur de $LOO_\lambda$ :
+$$
+\begin{aligned}
+ & 1 - \left(\mathbf{K}\mathbf{G}^{-1}\right)_{ii} \\
+= \{& \mathbf{K}\mathbf{G}^{-1} = \mathbf{I_n} - \lambda\mathbf{G}^{-1} \} \\
+ & \left( \lambda\mathbf{G}^{-1} \right)_{ii}
+\end{aligned}
+$$
+
+Nous obtenons une nouvelle expression simplifiée de $LOO_\lambda$ :
+$$
+LOO_\lambda = \frac{1}{n} \sum_{i=1}^{n} \left( \frac{\alpha_i}{\left(\mathbf{G}^{-1}\right)_{ii}} \right)^2
+$$
+
+Montrons comment calculer efficacement $\left(\mathbf{G}^{-1}\right)_{ii}$ en calculant l'expression d'un élément de la matrice $\mathbf{G}^{-1}$ :
+$$
+\begin{aligned}
+ & \left(\mathbf{G}^{-1}\right)_{ij} \\
+= \{& \text{Définition de $\mathbf{G}^{-1}$ en fonction de la décomposition en éléments propres de $\mathbf{K}$.} \} \\
+ & \left(\mathbf{Q} \left( \mathbf{\Lambda} + \lambda \mathbf{I_n} \right)^{-1} \mathbf{Q}^T\right)_{ij} \\
+= \{& \text{Définition du produit matricielle.} \} \\
+ & \sum_{k=1}^{n} \frac{Q_{ik}Q_{jk}}{\Lambda_{kk} + \lambda}
+\end{aligned}
+$$
+
+Nous pouvons donc calculer $\left(\mathbf{G}^{-1}\right)_{ii}$ en $\mathcal{O}(n)$ et $LOO_\lambda$ en $\mathcal{O}(n^2)$.
+
+## Choix de l'hyper-paramètre $\sigma^2$
+
+Il est possible de montrer qu'une fois les données standardisées (i.e., moyenne nulle et écart-type unité), la moyenne de la distance euclidienne entre deux points est égale à deux fois la dimension de l'espace des observations : $E\left[\|\mathbf{x_j}-\mathbf{x_i}\|^2\right] = 2d$. Ainsi, $\sigma^2=d$ est un choix raisonnable pour permettre au noyau gaussien de bien capturer les similarités entre points (i.e., les points les plus proches auront une similarité proche de $1$, tandis que les points les plus éloignés auront une similarité proche de $0$).
+
+## Exemple sur un jeu de données synthétique
+
+Nous reprenons le jeu de données synthétique utilisé depuis le premier module pour tester l'implémentation de la régression ridge à noyau gaussien.
+
+```{r}
+  set.seed(1123)
+  n <- 100
+  data = gendat(n,0.2)
+  splitres <- splitdata(data,0.8)
+  entr <- splitres$entr
+  test <- splitres$test
+
+  km <- krr(entr$X,entr$Y)
+  yh <- predict(km,test$X)
+  plt(test,f)
+  points(test$X, yh, pch=4)
+  testmae <- mean(abs(yh-test$Y))
+```
+
+Ce modèle atteint une erreur absolue moyenne de `r testmae` sur le jeu de test.
+
+## Annexe code source
+
+```{r, code=readLines("18_kernel_ridge_regression.R"), eval=FALSE}
+```

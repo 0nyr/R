@@ -1,0 +1,113 @@
+# Géométrie de la régression ridge et SVD
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("14_geometrie_ridge_svd.R", local = knitr::knit_global())
+```
+
+## Coefficients de la régression ridge en fonction du SVD
+
+Exprimons le calcul des coefficients d'une régression ridge en fonction de la décomposition en valeurs singulières de la matrice des données observées $\mathbf{X} \in \mathbb{R}^{M \times N}$.
+
+\begin{align*}
+ & \mathbf{\hat{\beta}_\lambda} \\
+ = \{& \text{Voir la dérivation de la régression ridge dans un précédent module.} \} \\
+ & (\mathbf{X}^T\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^T\mathbf{y} \\
+= \{& \text{SVD de $\mathbf{X}$ : } \mathbf{U}\mathbf{D}\mathbf{V}^T \quad
+       \mathbf{U} \in \mathbb{R}^{M \times M} \; , \;
+       \mathbf{D} \in \mathbb{R}^{M \times N} \; , \;
+       \mathbf{V} \in \mathbb{R}^{N \times N} \} \\
+ & (\mathbf{V}\mathbf{D}^T\mathbf{U}^T\mathbf{U}\mathbf{D}\mathbf{V}^T + \lambda\mathbf{I})^{-1}
+   \mathbf{V}\mathbf{D}^T\mathbf{U}^T \mathbf{y} \\
+= \{& \text{$\mathbf{U}$ et $\mathbf{V}$ sont orthogonales : } \mathbf{I} = \mathbf{V}\mathbf{V}^T \} \\
+ & (\mathbf{V}\mathbf{D}^T\mathbf{D}\mathbf{V}^T + \lambda\mathbf{V}\mathbf{V}^T)^{-1} \mathbf{V}\mathbf{D}^T\mathbf{U}^T \mathbf{y} \\
+= \phantom{\{}& \\
+ & (\mathbf{V}(\mathbf{D}^T\mathbf{D} + \lambda\mathbf{I})\mathbf{V}^T)^{-1} \mathbf{V}\mathbf{D}^T\mathbf{U}^T \mathbf{y} \\
+= \{& (\mathbf{X}\mathbf{Y})^{-1} = \mathbf{Y}^{-1} \mathbf{X}^{-1} \quad
+      \text{$\mathbf{V}$ est orthogonale : } \mathbf{V}^{-1} = \mathbf{V}^T\} \\
+ & \mathbf{V}(\mathbf{D}^T\mathbf{D} + \lambda\mathbf{I})^{-1}\mathbf{V}^T\mathbf{V}\mathbf{D}^T\mathbf{U}^T \mathbf{y} \\
+= \phantom{\{}& \\
+ & \mathbf{V}(\mathbf{D}^T\mathbf{D} + \lambda\mathbf{I})^{-1}\mathbf{D}^T\mathbf{U}^T \mathbf{y} \\
+= \{& \text{Soit $d_j$ le jème élément sur la diagonale de $\mathbf{D}$,
+           $\mathbf{u_j}$ et $\mathbf{v_j}$ les jèmes colonnes de resp. $\mathbf{U}$ et $\mathbf{V}$} \} \\
+ & \sum_{d_j>0} \mathbf{v_j} \frac{d_j}{d_j^2 + \lambda} \mathbf{u_j}^T\mathbf{y} \\
+\end{align*}
+
+Nous vérifions sur un exemple synthétique que les coefficients inférés par résolution du système linéaire correspondant à la matrice de Gram sont identiques à ceux inférés par l'approche basée sur la décomposition en valeurs singulières. Nous commençons par l'inférence basée sur la matrice de Gram.
+
+```{r}
+set.seed(1123)
+n <- 100
+deg1 <- 8
+data = gendat(n,0.2)
+splitres <- splitdata(data,0.8)
+entr <- splitres$entr
+test <- splitres$test
+alpha <- 1E-5
+coef.gram <- ridge.gram(alpha, entr, deg1)
+plt(entr,f)
+pltpoly(coef.gram)
+```
+
+Nous inférons maintenant les coefficients à partir du SVD de la matrice des données.
+
+```{r}
+ridge <- ridge.svd(entr, deg1)
+coef.svd <- ridge(alpha)
+plt(entr,f)
+pltpoly(coef.svd)
+```
+
+Nous vérifions que les coefficients trouvés par les deux approches sont identiques.
+
+```{r}
+all.equal(coef.gram,coef.svd)
+```
+
+La décomposition en valeurs singulières de $\mathbf{X}$ donne les coefficients de la régression Ridge pour toutes les valeurs possibles du coefficient de régularisation $\lambda$. Nous pouvons donc implémenter de façon efficace une validation croisée à k plis.
+
+```{r}
+alphas <- c(1E-8, 1E-7, 1E-6, 1E-5, 1E-4, 1E-3, 1E-2, 1E-1, 1)
+reskfold <- kfoldridge(K = 10, alphas = alphas, data = entr, degre = deg1)
+plt(entr,f)
+pltpoly(reskfold$coef)
+```
+
+Ci-dessus, nous avons généré un jeu de données composé de `r n` observations et nous avons calculé par validation croisée un polynôme de degré au plus égal à `r deg1` qui modélise au mieux ces données. La valeur de $\alpha$ retenue est : `r reskfold$alpha`.
+
+Traçons un boxplot des erreurs commises sur les plis de validation pour chaque valeur de $\alpha$.
+
+```{r}
+boxplot(reskfold$maes)
+```
+
+```{r}
+testpred <- polyeval(reskfold$coef, test$X)
+testmae <- mean(abs(testpred - test$Y))
+```
+
+Ce meilleur modèle atteint une erreur absolue moyenne de `r testmae` sur le jeu de test.
+
+```{r}
+plt(test,f)
+pltpoly(reskfold$coef)
+```
+
+## Régression ridge et géométrie
+
+Observons la relation entre les étiquettes prédites $\mathbf{\hat{y}_\lambda}$ et les étiquettes observées $\mathbf{y}$.
+
+\begin{align*}
+\mathbf{\hat{y}_\lambda} &= \mathbf{X} \mathbf{\hat{\beta}_\lambda} \\
+ &= \mathbf{U}\mathbf{D}\mathbf{V}^T \mathbf{V}(\mathbf{D}^T\mathbf{D} + \lambda\mathbf{I})^{-1}\mathbf{D}^T\mathbf{U}^T \mathbf{y} \\
+ &= \sum_{d_j>0} \mathbf{u_j} \frac{d_j^2}{d_j^2 + \lambda} \mathbf{u_j}^T\mathbf{y} \\
+\end{align*}
+
+Nous remarquons qu'en labsence de régularisation, $\lambda = 0$, les valeurs estimées $\mathbf{\hat{y}}$ sont les projections sur les axes principaux $\mathbf{u_j}$ -- qui couvrent l'espace des colonnes de $\mathbf{X}$, i.e. $Im(\mathbf{X})$ -- des valeurs observées $\mathbf{y}$.
+
+En présence de régularisation, $\lambda > 0$, les coordonnées, sur les axes principaux, de l'estimation $\mathbf{\hat{y}_\lambda}$ sont de plus en plus contractées lorsqu'on progresse vers les axes qui expliquent de moins en moins la variabilités des données.
+
+## Annexe code source
+
+```{r, code=readLines("14_geometrie_ridge_svd.R"), eval=FALSE}
+```

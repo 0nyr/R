@@ -1,0 +1,59 @@
+# Validation croisée
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("04_validation_croisee.R", local = knitr::knit_global())
+```
+
+## Principe de la validation croisée
+
+Comment choisir la valeur du coefficient de régularisation $\lambda$ pour une régression ridge ? Notons en passant que $\lambda$ est un exemple de ce que l'on appelle un hyperparamètre car sa valeur doit être fixée avant de pouvoir apprendre les paramètres du modèle (dans notre cas, les coefficients d'un modèle linéaire).
+
+Une possibilité est de diviser le jeu de données en deux parties, l'une utilisée pour apprendre le modèle prédictif, l'autre utilisée pour valider la qualité des prédictions sur des données qui n'ont pas été vues pendant la phase d'apprentissage. On parle de jeu d'entraînement et de jeu de test. Cette méthode est appelée "validation croisée".
+
+Il s'agirait donc de tester plusieurs valeurs de l'hyperparamètre $\lambda$ sur le jeu d'entraînement et de conserver celle qui donne les meilleurs résultats sur un jeu de données de test qui n'a pas été utilisé pour l'entraînement. Cette approche pose problème. Le jeu de test est utilisé pour sélectionner le meilleur modèle, c'est-à-dire celui qui a le plus de chance de bien prédire pour de nouvelles données (i.e. de bien "généraliser"). Pour avoir une meilleure mesure de l'erreur, il est préférable de tester ce meilleur modèle sur des données qui n'ont jamais été utilisées pour comparer des modèles. Ainsi, nous pourrions réserver trois jeux de données : entraînement, validation (pour comparer différents modèles) et test (pour estimer l'erreur du modèle choisi).
+
+Pour une approche souvent plus robuste, nous pouvons employer la stratégie dite de validation croisée à $K$ plis ("K Fold Cross-Validation"). Il s'agit de diviser aléatoirement le jeu d'entraînement en $K$ parties disjointes, appelées plis. Pour chaque valeur de l'hyperparamètre $\lambda$, nous apprenons $K$ modèles. Notons par exemple $M[\lambda_i,j]$, le j-ème des $K$ modèles appris pour la valeur $\lambda_i$ de l'hyperparamètre $\lambda$. Le jeu d'entraînement du modèle $M[\lambda_i,j]$ est constitué de l'union de $K-1$ plis, les $K$ plis initiaux auxquels on retire le j-ème pli qui joue le rôle de jeu de données de validation. Une estimation de l'erreur d'un modèle avec pour hyperparamètre $\lambda_i$ est obtenue en faisant la moyenne des erreurs des modèles $M[\lambda_i,j]$ sur les plis de validation. Ainsi, nous découvrons un meilleur hyperparamètre $\lambda_{best}$. Nous entraînons à nouveau un modèle sur l'ensemble du jeu d'entraînement (i.e., l'union des $K$ plis) avec un hyperparamètre $\lambda$ de valeur $\lambda_{best}$. Finalement, nous testons ce dernier modèle sur le jeu de test pour estimer son erreur sur des données encore jamais utilisées.
+
+## Application de la validation croisée à la régularisation de Tikhonov
+
+Le code source accompagnant ce chapitre comprend une fonction `splitdata` pour diviser le jeu de données en jeu d'entraînement et jeu de test. Ensuite, la fonction `kfoldridge` applique la stratégie de la validation croisée à $K$ plis sur le jeu d'entraînement pour une liste de valeurs de l'hyperparamètre $\lambda$. Elle retourne les coefficients du meilleur modèle et les moyennes des valeurs absolues des erreurs commises sur les plis de validation.
+
+```{r}
+set.seed(1123)
+N <- 100
+deg1 <- 8
+data = gendat(N,0.2)
+splitres <- splitdata(data,0.8)
+entr <- splitres$entr
+test <- splitres$test
+lambdas <- c(1E-8, 1E-7, 1E-6, 1E-5, 1E-4, 1E-3, 1E-2, 1E-1, 1)
+reskfold <- kfoldridge(K = 10, lambdas = lambdas, data = entr, degre = deg1)
+plt(entr,f)
+pltpoly(reskfold$coef)
+```
+
+Avec le code ci-dessus, nous générons un nouveau jeu de données composé de `r N` observations et nous calculons par validation croisée un polynôme de degré au plus égal à `r deg1` qui modélise au mieux ces données. La valeur de $\lambda$ retenue est : `r reskfold$lambda`.
+
+Traçons un boxplot des erreurs commises sur les plis de validation pour chaque valeur de $\lambda$.
+
+```{r}
+boxplot(reskfold$maes)
+```
+
+```{r}
+testpred <- polyeval(reskfold$coef, test$X)
+testmae <- mean(abs(testpred - test$Y))
+```
+
+Ce meilleur modèle atteint une erreur absolue moyenne de `r testmae` sur le jeu de test.
+
+```{r}
+plt(test,f)
+pltpoly(reskfold$coef)
+```
+
+## Annexe code source
+
+```{r, code=readLines("04_validation_croisee.R"), eval=FALSE}
+```

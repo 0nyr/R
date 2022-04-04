@@ -1,0 +1,74 @@
+# Dérivation du SVD
+
+Après ces préambules sur la notion de métrique associée à une matrice définie non négative et sur la méthode d'optimisation dite des multiplicateurs de Lagrange, nous reprenons la dérivation de la preuve de l'existence de la décomposition en valeurs singulières pour toute matrice.
+
+Rappelons que nous avons noté $\mathbf{v_1}$ le vecteur directeur du meilleur sous-espace de dimension 1 pour le nuage des $N$ observations de $\mathcal{R}^P$. Nous prouvons maintenant que $\mathbf{v_1}$ est le vecteur propre de $\mathbf{X}^T\mathbf{X}$ associé à la plus grande valeur propre $\lambda_1$.
+
+Le résultat est sans difficulté plus général. Nous le prouvons pour toute matrice symétrique $\mathbf{A}$ (non seulement $\mathbf{X}^T\mathbf{X}$) et toute métrique de $\mathcal{R}^P$ représentée par une matrice symétrique définie non négative $\mathbf{M}$ (non seulement la matrice identité $\mathbf{I}$).
+
+Nous rappelons que $\mathbf{v}^T\mathbf{A}\mathbf{v} = \Sigma a_{i,j}v_iv_j$. Ainsi, comme $\mathbf{A}$ et $\mathbf{M}$ sont symétriques (i.e., $a_{i,j}=a_{j,i}$ et $m_{i,j}=m_{j,i}$), les dérivées partielles des formes quadratiques ont les formes suivantes :
+\[
+\frac{\partial \mathbf{v}^T\mathbf{A}\mathbf{v}}{\partial \mathbf{v}}=2\mathbf{A}\mathbf{v} \quad \text{et} \quad \frac{\partial \mathbf{v}^T\mathbf{M}\mathbf{v}}{\partial \mathbf{v}}=2\mathbf{M}\mathbf{v}
+\]
+Pour trouver le maximum de $\mathbf{v}^T\mathbf{A}\mathbf{v}$ en intégrant la contrainte unitaire sur $\mathbf{v}$ (i.e., $\mathbf{v}^T\mathbf{M}\mathbf{v}=1$), nous annulons les dérivées du langrangien $\mathcal{L}$ :
+
+\[
+\mathcal{L} = \mathbf{v}^T\mathbf{A}\mathbf{v} - \lambda (\mathbf{v}^T\mathbf{M}\mathbf{v} - 1)
+\]
+
+\begin{align*}
+ & \frac{\partial \mathcal{L}}{\partial \mathbf{v}} = 0 \\
+= \{& \text{voir calcul des dérivées ci-dessus} \} \\
+ & 2\mathbf{A}\mathbf{v} - 2\lambda\mathbf{M}\mathbf{v} = 0 \\
+= \phantom{\{} & \\
+ & \mathbf{A}\mathbf{v} = \lambda\mathbf{M}\mathbf{v} \\
+= \{& \mathbf{v}^T\mathbf{M}\mathbf{v}=1 \} \\
+ & \lambda = \mathbf{v}^T\mathbf{A}\mathbf{v}
+\end{align*}
+
+Nous découvrons que la valeur du multiplicateur de Lagrange $\lambda$ est le maximum recherché. Par ailleurs, nous avons :
+
+\begin{align*}
+ & \mathbf{A}\mathbf{v} = \lambda\mathbf{M}\mathbf{v} \\
+= \{& \mathbf{M} \text{ est définie non négative et donc inversible} \} \\
+ & \mathbf{M}^{-1}\mathbf{A}\mathbf{v} = \lambda\mathbf{v}
+\end{align*}
+
+Donc $\mathbf{v}$ est le vecteur propre de $\mathbf{M}^{-1}\mathbf{A}$ associé à la plus grande valeur propre $\lambda$. Nous notons cette solution $\mathbf{v_1}$ et la valeur propre correspondante $\lambda_1$.
+
+Nous cherchons ensuite $\mathbf{v_2}$, unitaire ($\mathbf{v_2}^T\mathbf{M}\mathbf{v_2}=1$), orthogonal à $\mathbf{v_1}$ ($\mathbf{v_1}^T\mathbf{M}\mathbf{v_2}=0$) et qui maximise $\mathbf{v_2}^T\mathbf{A}\mathbf{v_2}$. Pour ce faire, nous annulons les dérivées du Langrangien ci-après.
+
+\[
+\mathcal{L} = \mathbf{v_2}^T\mathbf{A}\mathbf{v_2} - \lambda_2 (\mathbf{v_2}^T\mathbf{M}\mathbf{v_2} - 1) - \mu_2\mathbf{v_2}^T\mathbf{M}\mathbf{v_1}
+\]
+
+\begin{align*}
+ & \frac{\partial \mathcal{L}}{\partial \mathbf{v_2}} = 0 \\
+= \{& \text{Par définition de } \mathcal{L} \text{ et car A et M sont symétriques.}\} \\
+ & 2\mathbf{A}\mathbf{v_2} - 2\lambda_2\mathbf{M}\mathbf{v_2} - \mu_2\mathbf{M}\mathbf{v_1}= 0 \\
+\Rightarrow \{& \quad \text{Multiplier à gauche chaque membre par } \mathbf{v_1}^T \\
+\phantom{=}\phantom{ }\phantom{\{} & \quad \mathbf{v_1}^T\mathbf{A}\mathbf{v_2}=0 \; ; \; \mathbf{v_1}^T\mathbf{M}\mathbf{v_2}=0 \; ; \; \mathbf{v_1}^T\mathbf{M}\mathbf{v_1}=1 \quad \} \\
+ & \mu_2 = 0
+\end{align*}
+
+Nous avons utilisé ci-dessus la propriété $\mathbf{v_1}^T\mathbf{A}\mathbf{v_2}=0$ que nous prouvons ci-dessous.
+
+\begin{align*}
+ & \mathbf{v_1}^T\mathbf{A}\mathbf{v_2} \\
+= \{&  \mathbf{A} \text{ est symétrique.} \} \\
+ & \mathbf{v_2}^T\mathbf{A}\mathbf{v_1} \\
+= \{&  \mathbf{A}\mathbf{v_1}=\lambda_1\mathbf{M}\mathbf{v_1} \text{ car } \mathbf{v_1} \text{ est vecteur propre de } \mathbf{M}^{-1}\mathbf{A} \} \\
+ & \lambda_1 \mathbf{v_2}^T\mathbf{M}\mathbf{v_1} \\
+= \{& \mathbf{v_1} \text{ et } \mathbf{v_2} \text{ sont M-orthogonaux.} \} \\
+ 0
+\end{align*}
+
+Ainsi, nous trouvons :
+
+\begin{align*}
+ & \mathbf{A}\mathbf{v_2} = \lambda_2 \mathbf{M}\mathbf{v_2} \\
+= \{& \mathbf{M} \text{ est définie non négative donc inversible.} \} \\
+ & \mathbf{M}^{-1}\mathbf{A}\mathbf{v_2} = \lambda_2 \mathbf{v_2}
+\end{align*}
+
+Donc, $\mathbf{v_2}$ est le vecteur propre de $\mathbf{M}^{-1}\mathbf{A}$ qui correspond à la seconde plus grande valeur propre $\lambda_2$. Le raisonnement est similaire pour $\mathbf{v_3}$, etc.

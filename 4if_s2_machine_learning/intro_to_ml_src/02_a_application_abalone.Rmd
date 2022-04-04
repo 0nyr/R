@@ -1,0 +1,118 @@
+# Application au jeu de données `abalone`
+
+## Récupération du jeu de données
+
+Téléchargeons le jeu de données [`abalone`](http://archive.ics.uci.edu/ml/datasets/Abalone) depuis le répertoire de l'Université de Californie Irvine (University of California Irvine, UCI, machine learning repository).
+
+Variable        | Type        | Unité  | Commentaire
+----------------|-------------|--------|------------------------------
+Sex             | nominal     | -      | M, F, and I (infant)
+Length          | continuous  | mm     | Longest shell measurement
+Diameter        | continuous  | mm     | perpendicular to length
+Height          | continuous  | mm     | with meat in shell
+Whole weight    | continuous  | grams  | whole abalone
+Shucked weight  | continuous  | grams  | weight of meat
+Viscera weight  | continuous  | grams  | gut weight (after bleeding)
+Shell weight    | continuous  | grams  | after being dried
+Rings           | integer     | -      | +1.5 gives the age in years
+
+```{r cache=TRUE}
+abalone.cols = c("sex", "length", "diameter", "height", "whole.wt",
+                 "shucked.wt", "viscera.wt", "shell.wt", "rings")
+
+url <- 'http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data'
+abalone <- read.table(url, sep=",", row.names=NULL, col.names=abalone.cols,
+                      nrows=4177)
+```
+
+```{r}
+str(abalone)
+```
+
+## Préparation du jeu de données
+
+En cherchant des valeurs aberrantes, nous remarquons que, pour deux observations, la variable `height` a une valeur nulle.
+```{r}
+table(abalone$height)
+```
+
+Nous regardons les valeurs des autres attributs pour ces deux observations.
+```{r}
+abalone[abalone$height==0,]
+```
+
+Nous supprimons ces observations.
+```{r}
+abalone <- subset(abalone, height!=0)
+```
+
+Nous affichons les corrélations entre variables.
+```{r}
+print(as.matrix(cor(na.omit(abalone[,-1]))), digits=2)
+```
+
+Les variables sont très corrélées. Mesurons les colinéarités par les facteurs d'inflation de la variance.
+```{r}
+library(car)
+vif(lm(rings ~ ., data = abalone))
+```
+
+Parmi les variables corrélées, nous proposons de conserver celles avec les scores VIF les plus faibles (c'est-à-dire celles dont la variance s'explique le moins par la variance d'autres variables).
+
+## Modèle linéaire
+
+Nous calculons un modèle linéaire.
+```{r}
+abalone_lm <- lm(rings ~ length + height + viscera.wt + sex, data = abalone)
+```
+
+Observons les résultats statistiques proposés par défaut.
+```{r}
+summary(abalone_lm)
+```
+
+## Analyse graphique du modèle linéaire
+
+Affichons les résidus pour chaque observation.
+```{r}
+plot(abalone_lm, which = 1, id.n = 5)
+```
+
+L'observation d'identifiant $2052$ semble anormale. Nous observons que sa valeur `height` est anormalement élevée : `r abalone["2052","height"]`.
+```{r}
+abalone <- abalone[!(row.names(abalone) %in% c("2052")),]
+abalone_lm <- lm(rings ~ length + height + viscera.wt + sex, data = abalone)
+summary(abalone_lm)
+```
+
+```{r}
+plot(abalone_lm, which = 1, id.n = 5)
+```
+
+La variance des résidus n'est pas homogène. Plus le nombre d'anneaux est grand, plus la variance des résidus est grande.
+Ainsi, testons si un transformation logarithmique peut être signifique.
+```{r}
+abalone_lm <- lm(log(rings) ~ length + height + viscera.wt + sex, data = abalone)
+summary(abalone_lm)
+```
+
+Avec les intervalles de confiance.
+```{r}
+confint(abalone_lm)
+```
+
+```{r}
+plot(abalone_lm, which = 1, id.n = 5)
+```
+
+Observons les résidus en fonction des effets levier.
+```{r}
+plot(abalone_lm, which = 5, id.n = 5)
+```
+
+## Interprétation du modèle linéaire
+
+Une augmentation de `length` de $1mm$ augmente la prédiction de $1.1$ anneaux avec un intervalle de confiance à $95\%$ qui vaut $[0.95,1.27]$.
+De même pour les autres variables continues.
+
+Un passage de la variable `sex` de la catégorie de référence F à la catégorie I entraîne une diminution du nombre d'anneaux prédits de $0.12$ avec un intervalle de confiance à $95\%$ qui vaut $[-0.14,-0.10]$.

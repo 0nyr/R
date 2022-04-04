@@ -1,0 +1,60 @@
+# TP - Projection aléatoire - Sujet
+
+```{r}
+set.seed(1123)
+```
+
+L'idée de cette expérimentation provient de la la référence [@huang2006extreme] qui introduit le modèle prédictif dit _Extreme Learning Machine_.
+
+## Générer un jeu de données synthétique avec la fonction `sinc`
+
+Utiliser la fonction `sinc` pour générer un jeu de données $\{y_i,x_i\}$.
+$$
+y(x)=
+\begin{cases}
+sin(x)/x & x\neq0, \\
+1 & x=0
+\end{cases}
+$$
+
+Les $x_i$ sont distribués de façon uniforme sur l'intervalle $(-10,10)$. Un bruit (par exemple uniforme ou gaussien) est ajouté aux étiquettes $y_i$.
+
+## Régression ridge après projections non-linéaires aléatoires
+
+Créer un modèle qui a la forme d'un réseau de neurones à une couche.
+$$
+\hat{y}_i = \sum_{j=1}^{m} \beta_j g\left( \mathbf{w_j}\mathbf{x_i}^T + b_j \right) \quad i=1,\dots,n
+$$
+Cependant, contrairement à un réseau de neurones, les $m$ vecteurs $\mathbf{w_j}$ et scalaires $b_j$ sont initialisés aléatoirement et ne sont jamais modifiés. La fonction $g$ est une transformation non-linéaire (par ex., la fonction ReLU $g(x)=max(0,x)$, ou la fonction sigmoïde $g(x)=1/(1+exp(-x))$, etc.). Seuls les paramètres $\beta_j$ sont inférés par régression ridge en utilisant la matrice $\mathbf{H}$ ci-dessous au lieu de la martice $\mathbf{X}$ initiale.
+$$
+\mathbf{H} =
+\left[ \begin{array}{ccc}
+g\left( \mathbf{w_1}\mathbf{x_1}^T + b_1 \right) & \dots & g\left( \mathbf{w_m}\mathbf{x_1}^T + b_m \right) \\
+\vdots & \dots & \vdots \\
+g\left( \mathbf{w_1}\mathbf{x_n}^T + b_1 \right) & \dots & g\left( \mathbf{w_m}\mathbf{x_n}^T + b_m \right) \\
+\end{array} \right]
+$$
+
+Étudier les effets de la taille du jeu d'apprentissage, de la quantité de bruit, de l'hyperparamètre de régularisation, du nombre de transformations aléatoires, de la fonction non linéaire choisie, etc.
+
+## Jeu de données `housing`
+
+`housing` est un jeu de données célèbre aux nombreuses vertues pédagogiques^[https://www.kaggle.com/datasets/harrywang/housing]. Il permet d'expérimenter sur un problème de régression réaliste, viz. prédire la valeur médiane d'une maison en fonction des caractéristiques de son quartier. Après une phase d'exploration des données, comparer, sur un jeu de test, un modèle linéaire par régression ridge et un modèle par projection aléatoire.
+
+```{r cache=TRUE}
+housing <- read.csv(file="data/housing.csv",header=TRUE)
+str(housing)
+```
+
+Variable           | Type    | Commentaire
+-------------------|---------|------------------------------------
+longitude          | numeric | élevée pour un quartier à l'ouest
+latitude           | numeric | élevée pour un quartier au nord
+housing_median_age | numeric | âge médian d'une maison du quartier
+total_rooms        | numeric | total des pièces pour les maisons du quartier
+total_bedrooms     | numeric | total des chambres pour les maisons du quartier
+population         | numeric | nombre de résidents du quartier
+households         | numeric | nombre de familles du quartier
+median_income      | numeric | revenu médian des familles du quartier (USD 10k)
+median_house_value | numeric | valeur médiane d'une maison du quartier (USD)
+ocean_proximity    | factor  | évaluation grossière de la distance à l'océan

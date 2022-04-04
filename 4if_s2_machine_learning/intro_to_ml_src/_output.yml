@@ -1,0 +1,8 @@
+bookdown::pdf_book:
+  number_section: yes
+  includes:
+    in_header: preamble.tex
+  toc_depth: 3
+  toc_appendix: yes
+  extra_dependencies:
+    algorithm2e: [ruled,vlined,linesnumbered]

@@ -1,0 +1,272 @@
+---
+title: "projection_aleatoires"
+author: "Florian Rascoussier"
+date: "4/4/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Set the seed to keep consistent values between reruns.
+set.seed(1123)
+
+# import functions from sources
+source("intro_to_ml_src/18_kernel_ridge_regression.R")
+```
+
+regularisation, biais, variance: dans le DS
+
+## Chapitre 23 (24) - Régression ridge et dilemme bais-variance
+
+### 23.1 Génération d'un jeu de données
+
+Générer un jeu de données simulé à partir d’un modèle linéaire.
+
+Utiliser n = 70 et p = 55. Les $x_i$ sont indépendants et suivent, par exemple, une distribution uniforme entre 0 et 1 (voir la fonction `runif`). Faire en sorte que les colonnes de $X$ soient de moyenne nulle et de variance unité (voir la fonction `scale`). Cela simplifie les calculs ultérieurs
+sans perte de généralité.
+
+```{r echo=TRUE}
+n <- 70
+p <- 55
+
+X <- matrix(runif(n*p),nrow=n,ncol=p) # generate matrix using unif-orm model between 0 and 1 (default for `runif`)
+X <- scale(X) # center / scale colums of numeric matrix
+beta <- runif(p, min=-10, max=10) # generate uniform values
+Y <- X%*%beta # y as product of matrices X and beta
+sig2 <- 6 # standard deviation for zero-mean gaussian noise
+Y <- Y + rnorm(n, mean=0, sd=sig2) # add normal noise
+```
+
+### 23.2 Calcul des coefficients d'une régression ridge
+
+Tracer l’évolution des valeurs des coefficients d’un modèle ridge pour différentes valeurs de l’hyper-paramètre de régularisation λ.
+
+```{r echo=TRUE}
+ridgeSVD <- function(X, y) {
+  n <- nrow(X)
+  X.init <- X
+  y.init <- y
+  X <- scale(X)
+  Xs <- svd(X) # décomposition valeur singulière
+  d <- Xs$d
+  return(
+    # return a function
+    function(lambda) {
+      # compute model coefs depending on lambda hyper-parameter for rigde regularisation.
+      coef <- c(Xs$v %*% ((d / (d^2 + lambda)) * (t(Xs$u) %*% y)))
+      coef <- coef / attr(X,"scaled:scale")
+      inter <- - coef %*% attr(X,"scaled:center")
+      coef <- c(inter, coef)
+      trace.H <- sum(d^2 / (d^2 + lambda))
+      yh <- coef[1] + X.init%*%coef[-1]
+      gcv <- sum( ((y.init - yh) / (1 - (trace.H / n))) ^ 2 ) / n
+      return(list(coef = coef, gcv = gcv)) # return a list of best coefs and associated error measure (obtained by cross-validation 1 vs all)
+    }
+  )
+}
+
+ridge <- function(X, y, lambdas) {
+  p <- ncol(X)
+  errs <- double(length(lambdas))
+  coefs <- matrix(data = NA, nrow = length(lambdas), ncol = p+1)
+  ridge <- ridgeSVD(X, y) # build a rigge function
+  idx <- 1
+  
+  # call rigde for all lambdas
+  for(lambda in lambdas) {
+    res <- ridge(lambda)
+    coefs[idx,] <- res$coef
+    errs[idx] <- res$gcv
+    idx <- idx + 1
+  }
+  
+  err.min <- min(errs)
+  lambda.best <- lambdas[which(errs == err.min)]
+  coef.best <- coefs[which(errs == err.min),]
+  yh <- coef.best[1] + X%*%coef.best[-1]
+  
+  mae <- mean(abs(yh - y))
+  r <- list(
+    coef = coef.best,
+    lambda = lambda.best,
+    mae = mae,
+    coefs=coefs,
+    lambdas=lambdas
+  )
+  class(r) <- "ridge"
+  return(r)
+}
+```
+
+On applique la fonction $ridge$ à notre dataset de test.
+
+```{r echo=TRUE}
+lambdas <- 10^seq(-1,3,by=0.1)
+rm <- ridge(X, y, lambdas)
+matplot(rm$lambdas, rm$coefs, type=c('l'), pch=1, col='black', lty=1, log="x")
+abline(v=rm$lambda, col='green')
+points(x=rep(rm$lambda,length(beta)), y=beta, col='green', pch=19)
+```
+
+Interprétation du graphe: Ce graphique, à en abscisse les coefficients de la régularisation ridge, obtenu à gauche sans linéarisation, et à doite avec une linéarisation très forte. Les points verts correspondent aux coefficients réellements utilisés, alors que la ligne verte correspond à ce que retourne la meilleure linéarisation ridge obtenue par cross-valisation 1 vs all (Leave-One Out Cross Validation).
+
+### 23.3 Espérance de l'erreur de prédiction
+
+Espérance de l'erreur du modèle. Erreur calculée comme étant la somme de la variance, du biais au carré et du bruit au carré.
+
+Pour faire ça, on va générer un modèle connue, et mesurer l'erreur.
+
+```{r echo=TRUE}
+
+```
+
+Interprétation du graphe (celui avec la ligne rouge): Dans le cas précis de l'apprentissage de modèle, on définit l'erreur du modèle, en fonction de 3 éléments:
+
+* variance: mesure le fait qu'on apprend sur un set de donné fini, et qu'il y a des différences d'un dataset à l'autre. Si on avait un dataset infini, on aurait une variance la plus petite possible. Un modèle avec une variance élevée décrira mal les données d'entrainement et sera donc peu pertinent pour prédire de nouvelles données.
+
+* biais: erreur intrinsèque au modèle, l'expressivité du modèle, il mesure, en moyenne (sur une infinité de test), ce que donne le modèle. Il mesure le fait que le modèle décrive oui ou non le modèle réel des données. Peu de bias = peu expressif, il ne va pas beaucoup changer d'un dataset à l'autre. S'il est très expressif, d'un dataset à l'autre, il changera beaucoup, et sera donc peu pertinent pour prédire de nouvelles données.
+
+On cherche le modèle le plus simple, avec la variance et le biais le plus faire, afin que le modèle décrive bien les données d'entraînement (faible variance), et varie peu d'un dataset d'entraînement à l'autre (faible biais).
+
+La ligne rouge représente l'erreur du meilleur modèle, comparé au modèle réellement utilisé. Comme on peut le voir, le résultat est très proche (écart ligne rouge et point rouge minime).
+
+## Chapitre 25 (26) - Projections Aléatoires
+
+### 25.1 Génération des données
+
+Utiliser la fonction sinc pour générer un jeu de données {${y_i, x_i}$}, en définisant la fonction $sinc$. Les $x_i$ sont distribués de façon uniforme sur l’intervalle $(−10, 10)$.
+
+```{r echo=TRUE}
+# On définit la fameuse fonction `sinc`
+sinc <- function(x) {
+  if (x == 0) {
+    return(1)
+  } else {
+    y <- sin(x)/x
+    return(y)
+  }
+}
+
+# On crée ensuite le jeu de données
+size <- 100
+X <- runif(size, min = -10, max = 10) # generate unif-orm values
+Y <- sapply(X, sinc) # apply sinc to every elements of X
+Noise <- runif(size, min=-0.2, max=0.2) # generate uniform noise values
+Y <- Y + Noise # add noise to Y values
+
+# On affiche ensuite le jeu de données
+Xplt <- seq(-10,10,length.out=100) # echelle abscisse
+Yplt <- sapply(xplt, sinc) # associated value by `sinc` (apply `sinc` to every element of xplt)
+plot(
+  xplt, Yplt, type='l',
+  xlab = "x", ylab = "y"
+) # display the model
+points(X,Y, pch=20) # displays dataset {X, Y} over model (pch to display points as full black dots)
+```
+
+Comme on peut le voir, nos points se répartissent uniformément autour de la courbe du modèle. En effet, nos $yi$ de $Y$ correspondent aux $x_i$ de $X$ auquel on a ajouté un bruit généré selon une loi uniforme (en utilisant la fonction `runif`).
+
+## 25.2 Régression ridge après projection non-linéaire aléatoire
+
+Dans cette partie, nous allons voir comment, en utilisant une structure de données similaire à celle d'un réseau de neurone à 1 seule couche, on va pouvoir parvenir à une modélisation linéaire des données.
+
+En fait, on va généré des $w_i$ aléatoire et calculés leurs poids associés. Contrairement à un réseau de neurone qui dispose d'un moyen d'amélioration de ses $w_i$, en utilisant la back-propagation, nous verront que le simple fait d'initialiser nos neurones suffit à obtenir des résultats satisfaisant sans back-propagation.
+
+```{r echo=TRUE}
+positiveClipping <- function(x){
+  if (x >= 0) {
+    return(x)
+  } else {
+    return(0)
+  }
+} # relu
+
+logistic <- function(x){
+  return(1/(1+exp(-x)))
+}
+
+# ELM (see formula p146)
+extremLearningMachine <- function(
+  X, # observation data, each row = observe data, colums are the different parameters of the observations
+  Y, # vector of labels of the observations
+  nbDimensionsW = 2000, # nb dimensions of Weights W
+  method = c('positiveClipping', 'logistic'), # available methods to be used as non-linear function for Extreme Learning Machines
+  lambda = NULL # ridge hyper-parameter
+) {
+  method <- match.arg(method) # select available method
+  
+  X <- as.matrix(X) # attempt to turn X to a matrix
+  p <- ncol(X) # nb of colums of X
+  W <- matrix(runif(p*m, min=-1, max=1), nrow=p, ncol=m) # generate matrix of Weights W, by using unif-orm model. W contains the same number of rows as the number of observations in X, and a manually defined number of dimensions/columns  
+  H <- X%*%W # matrix product between X and W
+  b <- runif(m) # choose random pseudo-threshold
+  H <- sweep(H,2,b,'+') # 2 means "on colums == on dimension 2", apply the function "+ == basic addition" on the matrix H, of the elements b. It is just a way to add b to every column. I tested and actually, on 2 dimensional matrices, this just apply the function to every element of the matrix...
+  
+  if (method == 'positiveClipping') {
+    H <- positiveClipping(H)
+  } else if (method == 'logistic') {
+    H <- logistic(H)
+  }
+  
+  
+    
+}
+
+
+
+
+function(learnedModelObject, newX) {
+  
+}
+```
+
+
+
+## Chapitre 29 (30) Régression ridge à Noyau
+
+Un noyau est une fonction de similarité. Ici on choisi la fonction gaussienne pour calculer cette similarité. Les gaussiennes sont centrées sur les points, et diminues de manières exponentielles à l'éloignement du point en fonction du paramètre $sigma^2$ de la gaussienne.
+
+On utilise ces fonctions de similarités locales centrées sur chaque points.
+
+On va faire la combinaison linéaire de toutes les  gaussiennes entrées sur tout les points. On apprends cette combinaison linéaire en utilisant la régularisation ridge, donc on va devoir gérer le méta-paramètre lambda associé à cette régularisation ridge.
+
+Il faut aussi définir le paramètre $sigma^2$, afin de gérer l'étalement de la gaussienne. Plus il est petit, plus la gaussienne est pointue, plus il est large, plus elle est étalée. Si il tends vers l'infini, la gaussienne tendra vers une droite.
+
+Comme on fait la somme des gaussiennes, si le sigma est petit, la somme va simplement correspondre à des pics correspondant aux points. S'il est grand, la somme variera peu d'un point à l'autre pour finir par ressembler à une droite (c'est ce qu'on voit quand $sigma^2 = 10^8$). 
+
+Sur les courbes où l'on étudie l'influence des $sigma$ et des $lambda$, on prend un bout de fonction sinus quelconque, on prends 5 échantillons (5 points) de cette courbe et on applique notre méthode des gaussiennes. On affiche alors nos gaussiennes, la somme et la courbe prédite.
+
+On regarde à la fin ce que donne la méthode $krr$ définie dans R. Elle aussi trouve le même sigma, optenue par Leave-One Out Cross Validation de la linéarisation ridge. Quant-au lamda, en fait, une règle simple montre qu'il suffit de prendre un $sigma^2$ correspondant au nombre de dimension du jeu de test, ici X est un vecteur de dimension 1, donc il suffit de prendre 1. Et voilà, avec nos fonctions, on a retrouvé ce que fait cette fonction de R^
+
+### 29.1 Analyse de l'effet d'un paramètre $sigma^2$ pour un noyau gaussien
+
+Générer des points xi, par exemple entre −5 et 5.
+
+```{r echo=TRUE}
+X <- seq(from=-5,to=5,by=0.1)
+```
+
+Générer la matrice des similarités (ou noyau) K, résultat de l’application de la fonction k à chaque
+paire de points (xi, xj ). Le faire pour σ égal à 0.1, 0.5, 1, 2 ou 5.
+
+```{r echo=TRUE}
+K01 <- gausskernel(X, 0.1^2)
+K05 <- gausskernel(X,0.5^2)
+K1 <- gausskernel(X,1)
+K2 <- gausskernel(X,2^2)
+K5 <- gausskernel(X, 5^2)
+```
+
+
+```{r echo=TRUE}
+
+```
+
+
+```{r echo=TRUE}
+
+```
+
+
+

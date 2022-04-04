@@ -1,0 +1,183 @@
+# TP - Régression ridge et dilemme biais-variance - Correction
+
+```{r}
+set.seed(1123)
+```
+
+L'idée de cette expérimentation provient de la référence @hastie2020ridge.
+
+## Générer un jeu de données synthétique
+
+Générer un jeu de données simulé à partir d'un modèle linéaire :
+$$y_i = \mathbf{x_i}^T \boldsymbol\beta + \epsilon_i, i=1,\dots,n \quad \mathbf{x_i}\in\mathcal{R}^p \quad ; \quad \epsilon_i \sim \mathcal{N}(0,\sigma^2)$$
+
+```{r}
+n <- 70
+p <- 55
+```
+
+Utiliser $n=`r n`$ et $p=`r p`$. Les $\mathbf{x_i}$ sont indépendants et suivent, par exemple, une distribution uniforme entre $0$ et $1$ (voir la fonction `runif`). Faire en sorte que les colonnes de $\mathbf{X}$ soient de moyenne nulle et de variance unité (voir la fonction `scale`). Cela simplifie les calculs ultérieurs sans perte de généralité.
+
+```{r}
+sig2 <- 6 # standard deviation for zero-mean gaussian noise
+X <- matrix(runif(n*p),nrow=n,ncol=p)
+X <- scale(X)
+beta <- runif(p, min=-10, max=10)
+y <- X%*%beta + rnorm(n, mean=0, sd=sig2)
+```
+
+## Calculer les coefficients d'une régression ridge
+
+Tracer l'évolution des valeurs des coefficients d'un modèle ridge pour différentes valeurs de l'hyper-paramètre de régularisation $\lambda$. Réutiliser le code introduit au chapitre 15 sur la validation croisée un-contre-tous (voir le fichier `15_loocv.R`).
+
+Dans cette implémentation, les étiquettes $\mathbf{y}$ sont centrées avant d'opérer la régression ridge. Dans le contexte de cette expérimentation, il peut être intéressant de proposer une version pour laquelle les étiquettes ne sont pas centrées. Quelle est la différence ? La réponse est liée à la présentation de la standardisation au chapitre 3 sur la régularisation de Tikhonov.
+
+```{r}
+ridgeSVD <-
+function(X, y)
+{
+  n <- nrow(X)
+  X.init <- X
+  y.init <- y
+  X <- scale(X)
+  Xs <- svd(X)
+  d <- Xs$d
+  function(lambda) {
+    coef <- c(Xs$v %*% ((d / (d^2 + lambda)) * (t(Xs$u) %*% y)))
+    coef <- coef / attr(X,"scaled:scale")
+    inter <- - coef %*% attr(X,"scaled:center")
+    coef <- c(inter, coef)
+    trace.H <- sum(d^2 / (d^2 + lambda))
+    yh <- coef[1] + X.init%*%coef[-1]
+    gcv <- sum( ((y.init - yh) / (1 - (trace.H / n))) ^ 2 ) / n
+    list(coef = coef, gcv = gcv)
+  }
+}
+
+ridge <-
+function(X, y, lambdas)
+{
+  p <- ncol(X)
+  errs <- double(length(lambdas))
+  coefs <- matrix(data = NA, nrow = length(lambdas), ncol = p+1)
+  ridge <- ridgeSVD(X, y)
+  idx <- 1
+  for(lambda in lambdas) {
+    res <- ridge(lambda)
+    coefs[idx,] <- res$coef
+    errs[idx] <- res$gcv
+    idx <- idx + 1
+  }
+  err.min <- min(errs)
+  lambda.best <- lambdas[which(errs == err.min)]
+  coef.best <- coefs[which(errs == err.min),]
+  yh <- coef.best[1] + X%*%coef.best[-1]
+  mae <- mean(abs(yh - y))
+  r <- list(coef = coef.best,
+            lambda = lambda.best,
+            mae = mae,
+            coefs=coefs,
+            lambdas=lambdas)
+  class(r) <- "ridge"
+  return(r)
+}
+```
+
+```{r}
+lambdas <- 10^seq(-1,3,by=0.1)
+rm <- ridge(X, y, lambdas)
+matplot(rm$lambdas, rm$coefs, type=c('l'), pch=1, col='black', lty=1, log="x")
+abline(v=rm$lambda, col='green')
+points(x=rep(rm$lambda,length(beta)), y=beta, col='green', pch=19)
+```
+
+## Espérance de l'erreur de prédiction
+
+Pour les différentes valeurs de $\lambda$, calculer l'espérance de l'erreur de prédiction (c'est ici possible car les données sont simulées et nous connaissons le modèle qui les a générées). Cette notion a été introduite à la fin du chapitre 16. Quelle est la valeur de $\lambda$ qui minimise une estimation de l'espérance de l'erreur de prédiction ? Comment se compare-t-elle à la valeur trouvée par validation croisée un-contre-tous ? Étudier les effets du nombre d'observations, du nombre de variables et de la quantité de bruit.
+
+Soit $h$ le modèle ridge et $\mathbf{x}^*$ une observation dont on cherche à prédire la cible. Nous savons que l'espérance de l'erreur de prédiction est (voir chapitre 16) :
+$$
+\begin{aligned}
+ & E\left[ \left( h(\mathbf{x}^*) - y^* \right)^2 \right] \\
+= \{& \text{Voir module ``16 Biais et variance d'un estimateur''} \} \\
+ & E\left[ \left( h(\mathbf{x}^*) - \overline{h(\mathbf{x}^*)} \right)^2 \right] + \left( \overline{h(\mathbf{x}^*)} - f(\mathbf{x}^*) \right)^2 + \sigma^2 \\
+= \{& \text{Introduction des définition de la variance, du biais et du bruit.} \} \\
+ & \text{Variance} \; + \; \text{Biais}^2 \; + \; \text{Bruit}^2
+\end{aligned}
+$$
+
+Sous hypothèse d'un modèle génératif linéaire, nous avons calculé les valeurs de la variance et du biais des estimateurs d'un modèle ridge exprimés en fonction de la décomposition en valeurs singulières de $\mathbf{X}$ (notée, $\mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^T$) (voir chapitre 17).
+$$
+\begin{aligned}
+Var\left(\hat{\boldsymbol\beta}_\lambda\right) &= \sigma^2 \sum_{d_j>0} \frac{d_j^2}{(d_j^2 + \lambda)^2} \mathbf{v_j}\mathbf{v_j}^T \\
+Bias\left(\hat{\boldsymbol\beta}_\lambda\right) &= E\left[\hat{\boldsymbol\beta}_\lambda\right] - \boldsymbol\beta = \left(\sum_{d_j>0} \mathbf{v_j} \frac{d_j}{d_j^2 + \lambda} d_j \mathbf{v_j}^T\boldsymbol\beta\right) - \boldsymbol\beta = \sum_{d_j>0} \mathbf{v_j} \frac{\lambda}{d_j^2 + \lambda} \mathbf{v_j}^T\boldsymbol\beta
+\end{aligned}
+$$
+
+Comme $h(\mathbf{x}^*) = \hat{\boldsymbol\beta_0} + \mathbf{x}^{*T}\hat{\boldsymbol\beta}_\lambda$, et que nous pouvons oublier $\hat{\boldsymbol\beta_0}$ qui doit être nul car le processus qui a généré les données n'a pas d'intercept, nous avons :
+$$
+E\left[ \left( h(\mathbf{x}^*) - y^* \right)^2 \right] = \mathbf{x}^{*T} Var\left(\hat{\boldsymbol\beta}_\lambda\right)\mathbf{x}^{*} + \left(\mathbf{x}^{*T} Bias\left(\hat{\boldsymbol\beta}_\lambda\right)\right)^2 + \sigma^2
+$$
+
+Pour implémenter le calcul de la variance et du biais, nous introduisons une fonction accessoire qui opère la multiplication d'une matrice diagonale (représentée par un vecteur de ses éléments diagonaux) par une matrice carrée.
+```{r}
+multdiag <-
+function(X,d)
+{
+  R <- matrix(NA, nrow=dim(X)[1], ncol=dim(X)[2])
+  for (i in 1:dim(X)[2]) { R[,i]=X[,i]*d[i] }
+  return(R)
+}
+```
+
+Nous introduisons les fonctions qui calculent $Var\left(\hat{\boldsymbol\beta}_\lambda\right)$ et $Bias\left(\hat{\boldsymbol\beta}_\lambda\right)$ pour une valeur de $\lambda$ fixée. Nous utilisons ces fonctions pour calculer l'espérance de l'erreur pour une valeur de $\lambda$.
+```{r}
+n2 <- 10000
+X2 <- matrix(runif(n2*p),nrow=n2,ncol=p)
+X2 <- scale(X2)
+y2 <- X2%*%beta + rnorm(n2, mean=0, sd=sig2)
+
+
+Xs <- svd(X2)
+
+var <-
+function(lambda)
+{
+  d <- (Xs$d^2)/(Xs$d^2 + lambda)^2
+  var <- multdiag(Xs$v,d)
+  var <- sig2^2 * tcrossprod(var,Xs$v)
+}
+
+bias <-
+function(lambda)
+{
+  d <- lambda/(Xs$d^2+lambda)
+  bias <- multdiag(Xs$v,d)
+  bias <- bias %*% crossprod(Xs$v,beta)
+}
+
+epe <-
+function(lambda)
+{
+  var <- var(lambda)
+  bias <- bias(lambda)
+  epe <- mean(rowSums(X2*(X2%*%var)))
+  epe <- epe + mean((X2%*%bias)^2)
+  epe <- epe + sig2^2
+}
+
+epes <- sapply(lambdas, epe)
+```
+
+Nous pouvons maintenant comparer la meilleure valeur théorique de l'hyper-paramètre de régularisation $\lambda$ avec sa valeur estimée par validation croisée un-contre-tous.
+
+```{r}
+epes.min <- min(epes)
+lambda.th <- lambdas[which(epes == epes.min)]
+coef.th <- rm$coefs[which(epes == epes.min),]
+matplot(rm$lambdas, rm$coefs, type=c('l'), pch=1, col='black', lty=1, log="x")
+abline(v=rm$lambda, col='green')
+points(x=rep(rm$lambda,length(beta)), y=beta, col='green', pch=19)
+abline(v=lambda.th, col='red')
+points(x=rep(lambda.th,length(beta)), y=beta, col='red', pch=19)
+```

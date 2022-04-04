@@ -1,0 +1,221 @@
+# Factorisation QR
+
+```{r, include=FALSE}
+source("12_factorisation_qr.R", local = knitr::knit_global())
+```
+
+## Factorisation QR
+
+Nous introduisons une décomposition matricielle qui nous permettra plus tard d'implémenter les calculs des décompositions en valeurs propres et en valeurs singulières.
+
+Nous cherchons des vecteurs orthonormaux qui forment une base pour les espaces couverts par les colonnes successives d'une matrice $\mathbf{A} \in \mathbb{R}^{M \times N}$. Notons :
+
+\begin{align*}
+<\mathbf{a_1}> &: \text{l'espace (la ligne) couvert par la première colonne de $\mathbf{A}$} \\
+<\mathbf{a_1}, \mathbf{a_2}> &: \text{l'espace (le plan) couvert par les deux premières colonne de $\mathbf{A}$} \\
+\text{Etc.} &: \text{Etc.} \\
+\end{align*}
+
+Nous avons $<\mathbf{a_1}> \subseteq <\mathbf{a_1}, \mathbf{a_2}> \subseteq \dots \subseteq <\mathbf{a_1}, \mathbf{a_2}, \dots, \mathbf{a_N}>$.
+
+Nous cherchons des vecteurs orthogonaux $\mathbf{q_i}$ tels que :
+\[
+<\mathbf{q_1}, \mathbf{q_2}, \dots, \mathbf{q_j}> = <\mathbf{a_1}, \mathbf{a_2}, \dots, \mathbf{a_j}> \quad \text{pour } j=1,2,\dots,N
+\]
+
+Ce qui peut s'écrire sous une forme matricielle :
+\[
+(\mathbf{a_1} \; \mathbf{a_2} \; \dots \; \mathbf{a_N}) =
+(\mathbf{q_1} \; \mathbf{q_2} \; \dots \; \mathbf{q_N})
+\left( \begin{array}{cccc}
+r_{11} & r_{12} & \dots & r_{1N} \\
+0 & r_{22} & \dots & r_{2N} \\
+\dots & \dots & \dots & \dots \\
+0 & 0 & \dots & r_{NN}
+\end{array} \right)
+\]
+
+Sans perte de généralité, considérons la situation où $M>N$. Nous appelons alors cette expression, $\mathbf{A}=\mathbf{\hat{Q}}\mathbf{\hat{R}}$ (avec $\mathbf{\hat{Q}} \in \mathbb{R}^{M \times N}$ et $\mathbf{\hat{R}} \in \mathbb{R}^{N \times N}$), la forme réduite de la factorisation QR.
+
+Nous pouvons aussi considérer la forme dite complète de la factorisation QR, avec $\mathbf{Q} \in \mathbb{R}^{M \times M}$ et $\mathbf{R} \in \mathbb{R}^{M \times N}$. Dans ce cas, les $M-N$ dernières lignes de $\mathbf{R}$ sont nulles et il suffit de compléter $\mathbf{\hat{Q}}$ en lui ajoutant $M-N$ colonnes orthogonales.
+
+## Orthogonalisation de Gram-Schmidt
+
+Nous présentons l'algorithme de Gram-Schmidt pour la décomposition QR.
+
+Le principe est de construire $\mathbf{q_j}$ orthogonal à $\mathbf{q_1}, \mathbf{q_2}, \dots, \mathbf{q_{j-1}}$ en retirant à la colonne $\mathbf{a_j}$ ses composantes selon les directions de $\mathbf{q_1}, \mathbf{q_2}, \dots, \mathbf{q_{j-1}}$ :
+
+\begin{align*}
+\mathbf{v_j} &= \mathbf{a_j} - (\mathbf{q_1}^T\mathbf{a_j})\mathbf{q_1} - (\mathbf{q_2}^T\mathbf{a_j})\mathbf{q_2} - \dots - (\mathbf{q_{j-1}}^T\mathbf{a_j})\mathbf{q_{j-1}} \\
+\mathbf{q_j} &= \mathbf{v_j} / \|\mathbf{v_j}\| \\
+\end{align*}
+
+Nous obtenons ainsi la matrice $\mathbf{\hat{Q}}$. Pour $\mathbf{\hat{R}}$, nous avons, par construction des $\mathbf{q_j}$ :
+
+\begin{align*}
+r_{ij}   &= \mathbf{q_i}^T \mathbf{a_j} &\phantom{,} i \neq j \\
+|r_{jj}| &= \| \mathbf{a_j} - \sum_{i=1}^{j-1} r_{ij} \mathbf{q_i} \| &\phantom{,} \text{par convention, nous choisissons $r_{jj}>0$} \\
+\end{align*}
+
+Nous avons ainsi dérivé l'algorithme classique de Gram-Schmidt :
+
+\begin{algorithm}[H]
+\DontPrintSemicolon
+\NoCaptionOfAlgo
+\SetAlgoLined
+\SetKwInput{Res}{Résultat}
+\SetKwInOut{Input}{Entrée}\SetKwInOut{Output}{Sortie}
+\SetKwFor{Pour}{pour}{faire}{finpour}
+\SetKw{KwTo}{à}
+\Res{Décomposition QR de la matrice A}
+\Input{$\mathbf{A} \in \mathbb{R}^{M \times N}$, avec $M \geq N$}
+\Output{$\mathbf{Q} \in \mathbb{R}^{M \times N}$ une matrice orthonormale \\
+$\mathbf{R} \in \mathbb{R}^{N \times N}$ une matrice triangulaire supérieure \\
+telles que $\mathbf{A} = \mathbf{Q} \mathbf{R}$}
+\BlankLine
+\Pour{$j \gets 1$ \KwTo $N$}{
+  $\mathbf{v_j} \gets \mathbf{a_j}$ \;
+  \Pour{$i \gets 1$ \KwTo $j-1$}{
+    $r_{ij} \gets \mathbf{q_i}^T\mathbf{a_j}$ \;
+    $\mathbf{v_j} \gets \mathbf{v_j} - r_{ij}\mathbf{q_i}$ \;
+  }
+  $r_{jj} \gets \| \mathbf{v_j} \|$ \;
+  $\mathbf{q_j} \gets \mathbf{v_j} / r_{jj}$ \;
+}
+\caption{Gram-Schmidt classique (GS)}
+\end{algorithm}
+
+## Algorithme de Gram-Schmidt modifié
+
+### Dérivation de l'algorithme de Gram-Schmidt modifié
+
+Nous présentons une autre manière de voir ce résultat qui nous mènera à un algorithme équivalent mais numériquement plus stable.
+
+Nous pouvons considérer que $\mathbf{q_j}$ est obtenu en projetant $\mathbf{a_j}$ sur l'espace orthogonal à $<\mathbf{a_1}, \mathbf{a_2}, \dots, \mathbf{a_{j-1}}>$, cet espace étant par construction égal à $<\mathbf{q_1}, \mathbf{q_2}, \dots, \mathbf{q_{j-1}}>$ :
+\[
+\mathbf{q_j} = \frac{\mathbf{P_j}\mathbf{a_j}}{\|\mathbf{P_j}\mathbf{a_j}\|} \quad ; \quad
+\mathbf{P_j} = \mathbf{I} - \mathbf{Q_{j-1}}\mathbf{Q_{j-1}}^T \; \text{avec }
+\mathbf{Q_{j-1}} = (\mathbf{q_1} \; \mathbf{q_2} \; \dots \mathbf{q_{j-1}})
+\]
+
+De façon équivalente, $\mathbf{P_j}$ peut s'exprimer comme le produit de projecteurs sur les espaces orthogonaux à $\mathbf{q_1}$, puis $\mathbf{q_2}$, etc. jusqu'à $\mathbf{q_{j-1}}$ :
+\[
+\mathbf{P_j} = \mathbf{P_{\bot \mathbf{q_{j-1}}}} \mathbf{P_{\bot \mathbf{q_{j-2}}}} \dots
+  \mathbf{P_{\bot \mathbf{q_{2}}}} \mathbf{P_{\bot \mathbf{q_{1}}}} \quad
+  \text{avec } \mathbf{P_{\bot \mathbf{q}}} = \mathbf{I} - \mathbf{q}\mathbf{q}^T
+\]
+
+Dans la version classique de Gram-Schmidt, $\mathbf{v_j}=\mathbf{P_j}\mathbf{a_j}$.
+
+Dans la version modifiée de Gram-Schmidt :
+\[
+\mathbf{v_j}=\mathbf{P_{\bot \mathbf{q_{j-1}}}} \mathbf{P_{\bot \mathbf{q_{j-2}}}} \dots
+  \mathbf{P_{\bot \mathbf{q_{2}}}} \mathbf{P_{\bot \mathbf{q_{1}}}}
+  \mathbf{a_j}
+\]
+
+Ainsi, nous observons que dès que $\mathbf{q_1}$ est connu ($\mathbf{q_1} = \mathbf{v_1} / \|\mathbf{v_1}\|$, $\mathbf{v_1} = \mathbf{a_1}$), nous pouvons appliquer $\mathbf{P_{\bot \mathbf{q_{1}}}}$ à $\mathbf{a_2}, \mathbf{a_3}, \dots, \mathbf{a_N}$. Puis, quand $\mathbf{q_2}$ est connu, nous pouvons appliquer $\mathbf{P_{\bot \mathbf{q_{2}}}}$ à $\mathbf{P_{\bot \mathbf{q_{1}}}}\mathbf{a_3}, \mathbf{P_{\bot \mathbf{q_{1}}}}\mathbf{a_4}, \dots, \mathbf{P_{\bot \mathbf{q_{1}}}}\mathbf{a_N}$. Etc. Nous en déduisons l'algorithme de Gram-Schmidt modifié.
+
+\begin{algorithm}[H]
+\DontPrintSemicolon
+\NoCaptionOfAlgo
+\SetAlgoLined
+\SetKwInput{Res}{Résultat}
+\SetKwInOut{Input}{Entrée}\SetKwInOut{Output}{Sortie}
+\SetKwFor{Pour}{pour}{faire}{finpour}
+\SetKw{KwTo}{à}
+\Res{Décomposition QR de la matrice A}
+\Input{$\mathbf{A} \in \mathbb{R}^{M \times N}$, avec $M \geq N$}
+\Output{$\mathbf{Q} \in \mathbb{R}^{M \times N}$ une matrice orthonormale \\
+$\mathbf{R} \in \mathbb{R}^{N \times N}$ une matrice triangulaire supérieure \\
+telles que $\mathbf{A} = \mathbf{Q} \mathbf{R}$}
+\BlankLine
+\Pour{$i \gets 1$ \KwTo $N$}{
+  $\mathbf{v_i} \gets \mathbf{a_i}$ \;
+}
+\Pour{$i \gets 1$ \KwTo $N$}{
+  $r_{ii} \gets \|\mathbf{v_i}\|$ \;
+  $\mathbf{q_i} \gets \mathbf{v_i} / r_{ii}$ \;
+  \Pour{$j \gets i+1$ \KwTo $N$}{
+    $r_{ij} \gets \mathbf{q_i}^T\mathbf{v_j}$ \;
+    $\mathbf{v_j} \gets \mathbf{v_j} - r_{ij}\mathbf{q_i}$ \;
+  }
+}
+\caption{Gram-Schmidt modifié (MGS)}
+\end{algorithm}
+
+### Test de l'algorithme
+
+Nous comparons notre implémentation (voir la fonction `mgs` dans le code source associé à ce module) avec le résultat d'un petit exemple issu de [Wikipedia](https://en.wikipedia.org/wiki/Gram–Schmidt_process#Example).
+
+```{r}
+mat <- matrix(c(3,2,1,2),nrow=2,ncol=2,byrow = TRUE)
+qr <- mgs(mat)
+all.equal(qr$Q, (1/(sqrt(10))) * matrix(c(3,1,-1,3),nrow=2,ncol=2))
+```
+
+### Comparaison de la stabilité numérique des deux versions de l'algorithme de Gram-Schmidt
+
+Observons comment de petites erreurs de calculs se propagent dans le cas de l'algorithme de Gram-Schmidt (GS). Mettons qu'une petite erreur ait été commise sur le calcul de $\mathbf{q_2}$ qui s'en trouve de ce fait n'être pas parfaitement perpendiculaire à $\mathbf{q_1}$ :
+\[
+\mathbf{q_1}^T\mathbf{q_2} = \epsilon > 0
+\]
+
+Quelle est l'effet de cette erreur sur la valeur de $\mathbf{v_3}$ ?
+
+\begin{align*}
+\mathbf{v_3}               &= \mathbf{a_3} - (\mathbf{q_1}^T\mathbf{a_3})\mathbf{q_1} -
+                              (\mathbf{q_2}^T\mathbf{a_3})\mathbf{q_2} \\
+\mathbf{q_2}^T\mathbf{v_3} &= \mathbf{q_2}^T\mathbf{a_3} - (\mathbf{q_1}^T\mathbf{a_3})\epsilon -
+                              (\mathbf{q_2}^T\mathbf{a_3}) = - (\mathbf{q_1}^T\mathbf{a_3})\epsilon \\
+\mathbf{q_1}^T\mathbf{v_3} &= \mathbf{q_1}^T\mathbf{a_3} - (\mathbf{q_1}^T\mathbf{a_3}) -
+                              (\mathbf{q_2}^T\mathbf{a_3})\epsilon = - (\mathbf{q_2}^T\mathbf{a_3})\epsilon \\
+\end{align*}
+
+L'erreur commise sur $\mathbf{q_2}$ s'est transmise à $\mathbf{q_3}$ qui n'est plus parfaitement orthogonal à $\mathbf{q_1}$ et $\mathbf{q_2}$.
+
+Pour l'algorithme de Gram-Schmidt modifié (MGS), nous avons :
+
+\begin{align*}
+\mathbf{v_3}^{(0)} &= \mathbf{a_3} \\
+\mathbf{v_3}^{(1)} &= \mathbf{v_3}^{(0)} - \mathbf{q_1}^T\mathbf{v_3}^{(0)}\mathbf{q_1} \\
+\mathbf{v_3}       &= \mathbf{v_3}^{(1)} - \mathbf{q_2}^T\mathbf{v_3}^{(1)}\mathbf{q_2} \\
+\mathbf{q_2}^T\mathbf{v_3} &= \mathbf{q_2}^T\mathbf{v_3}^{(1)} - \mathbf{q_2}^T\mathbf{v_3}^{(1)} = 0 \\
+\end{align*}
+
+Il n'y a pas d'erreur pour l'orthogonalité entre $\mathbf{q_3}$ et $\mathbf{q_2}$. Etudions maintenant l'erreur commise sur l'orthogonalité entre $\mathbf{q_3}$ et $\mathbf{q_1}$.
+
+\begin{align*}
+\mathbf{q_1}^T\mathbf{v_3} &= \mathbf{q_1}^T\mathbf{v_3}^{(1)} - \mathbf{q_2}^T\mathbf{v_3}^{(1)}\epsilon \\
+\mathbf{q_2}^T\mathbf{v_3}^{(1)} &= \mathbf{q_2}^T\mathbf{v_3}^{(0)} - \mathbf{q_1}^T\mathbf{v_3}^{(0)}\epsilon \\
+\mathbf{q_1}^T\mathbf{v_3}^{(1)} &= \mathbf{q_1}^T\mathbf{v_3}^{(0)} - \mathbf{q_1}^T\mathbf{v_3}^{(0)} = 0 \\
+\mathbf{q_1}^T\mathbf{v_3} &= -(\mathbf{q_2}^T\mathbf{v_3}^{(0)} - \mathbf{q_1}^T\mathbf{v_3}^{(0)}\epsilon) =
+  -\mathbf{q_2}^T\mathbf{v_3}^{(0)}\epsilon + \mathbf{q_1}^T\mathbf{v_3}^{(0)}\epsilon^2
+\end{align*}
+
+Ainsi, comme pour la version classique de Gram-Schmidt, une erreur de l'ordre de grandeur de $\epsilon$ est commise sur l'orthogonalité entre $\mathbf{q_1}$ et $\mathbf{q_3}$. Par contre, il n'y a pas de propagation de l'erreur pour l'orthogonalité entre $\mathbf{q_2}$ et $\mathbf{q_3}$. C'est pourquoi l'algorithme de Gram-Schmidt modifié est numériquement plus stable que l'algorithme de Gram-Schmidt classique.
+
+## Autres algorithmes
+
+Notons qu'une autre approche très souvent employée pour le calcul de la décomposition QR est la méthode dite de Householder. Elle assure le maintien d'une quasi parfaite orthogonalité des colonnes de $\mathbf{Q}$. Il existe également l'approche dite des rotations de Givens, plus facilement parallélisable et permettant la mise à jour de la décomposition suite à l'ajout d'une ligne à la matrice $\mathbf{X}$.
+
+Par contre, Gram-Schmidt permet de calculer la forme réduite de la décomposition QR, alors que les algorithmes de Givens et Householder calculent la forme complète. Ainsi, Gram-Schmidt n'est pas tout à fait aussi stable mais peut parfois être plus efficace.
+
+## Décomposition QR pour résoudre un système linéaire au sens des moindres carrés
+
+Une transformation orthogonale $\mathbf{Q}$ ne change pas la norme du vecteur transformé.
+$$
+\|\mathbf{Q} \mathbf{y}\|_2^2 = \left(\mathbf{Q} \mathbf{y}\right)^T\left(\mathbf{Q} \mathbf{y}\right) = \mathbf{y}^T(\mathbf{Q}^T(\mathbf{Q}\mathbf{y} = \mathbf{y}^T\mathbf{y} = \|\mathbf{y}\|_2^2
+$$
+
+Avec $\mathbf{A}=\mathbf{Q}\mathbf{R}$ (décomposition QR en forme réduite, avec $\mathbf{Q} \in \mathbb{R}^{M \times N}$ et $\mathbf{R} \in \mathbb{R}^{N \times N}$) :
+$$
+\| \mathbf{A}\mathbf{x} - \mathbf{b}\|_2 = \| \mathbf{Q}^T \left(\mathbf{A}\mathbf{x} - \mathbf{b}\right)\|_2 = \| \mathbf{Q}^T \left(\mathbf{Q}\mathbf{R}\mathbf{x} - \mathbf{b}\right)\|_2 = \| \mathbf{R}\mathbf{x} - \mathbf{Q}^T\mathbf{b}\|_2
+$$
+
+Or, si la matrice $\mathbf{R}\mathbf{x}$ n'est pas singulière (i.e., s'il n'y a pas de colinéarités entre ses colonnes) le système linéaire $\mathbf{R}\mathbf{x} = \mathbf{Q}^T\mathbf{b}$, à $N$ équations et $N$ inconnues, se résout simplement par substitutions car $\mathbf{R}$ est de forme diagonale supérieure.
+
+## Annexe code source
+
+```{r, code=readLines("12_factorisation_qr.R"), eval=FALSE}
+```

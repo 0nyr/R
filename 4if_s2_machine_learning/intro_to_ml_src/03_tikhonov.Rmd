@@ -1,0 +1,123 @@
+# Régularisation de Tikhonov
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("03_tikhonov.R", local = knitr::knit_global())
+```
+
+## Problèmes linéaires mal posés
+
+Avec moins d'observations que de fonctions de base ($n<p$), le système $\mathbf{X}\boldsymbol\beta=\mathbf{y}$ ne possède pas de solution unique. Même quand $n \geq p$, le système linéaire peut posséder une solution approchée préférable à la solution optimale. C'est en particulier vrai quand plusieurs observations sont très proches à un coefficient multiplicatif près (on parle de colinéarités). Par exemple, soit le système linéaire suivant :
+\[
+\left( \begin{array}{cc}
+1 & 1 \\
+1 & 1.00001 \\
+\end{array} \right)
+\left( \begin{array}{c}
+\beta_1 \\ \beta_2
+\end{array} \right)
+=
+\left( \begin{array}{c}
+1 \\ 0.99
+\end{array} \right)
+\]
+Sa solution est $\boldsymbol\beta^T = (1001,-1000)$. Cependant, la solution approchée $\boldsymbol\beta^T = (0.5,0.5)$  semble préférable. En effet, la solution optimale a peu de chance de bien s'adapter à de nouvelles observations (par exemple, l'observation $(1,2)$ serait projetée sur l'étiquette $-999$).
+
+## Ajout de contraintes de régularité
+
+Ainsi, lorsqu'il faut choisir entre plusieurs solutions, il peut être efficace d'exprimer une préférence envers celles dont les coefficients (ou paramètres) ont de faibles valeurs. Cela consiste par exemple à minimiser $|\beta_1|+|\beta_2|+\dots$ (aussi noté $\|\boldsymbol\beta\|_1$, la "norme 1") ou encore $\beta_1^2+\beta_2^2+\dots$ (aussi noté $\|\boldsymbol\beta\|_2^2$, le carré de la "norme 2"). Dans ce dernier cas, il s'agit de résoudre un nouveau problème de minimisation :
+
+\begin{align*}
+\min_{\boldsymbol\beta} \|\mathbf{X}\boldsymbol\beta-\mathbf{y}\|^2_2 + \lambda \|\boldsymbol\beta\|^2_2 \\
+avec \quad 0 \leq \lambda
+\end{align*}
+
+C'est encore un problème de minimisation quadratique en $\boldsymbol\beta$ dont le minimum se découvre par annulation de la dérivée.
+
+\begin{align*}
+ & \mathbf{0} = 2\mathbf{X}^T\mathbf{X}\boldsymbol\beta - 2\mathbf{X}^T\mathbf{y} + 2\lambda\boldsymbol\beta \\
+=& \\
+ & \left( \mathbf{X}^T\mathbf{X} + \lambda \mathbf{I}_{n\times n} \right) \boldsymbol\beta = \mathbf{X}^T \mathbf{y}
+\end{align*}
+
+En pratique, il s'agit donc d'ajouter une petite valeur positive $\lambda$ aux éléments de la diagonale de la matrice de Gram. Cette approche porte plusieurs noms dont "régularisation de Tikhonov" ou "régression Ridge".
+
+## Standardisation
+
+La régression Ridge contraint les coefficients de la régression linéaire en les contractant vers 0. L'importance de la contraction est proportionnelle au carré des valeurs des coefficients. Ainsi, il est important que les domaines des différentes variables partage une même échelle. Sinon, l'intensité de l'influence d'une variable sur la régularisation dépendrait de son échelle.
+
+Avant d'inférer les valeurs des paramètres du modèle linéaire, nous standardisons les variables pour qu'elles soient toutes sur une échelle comparable. Chaque variable $\mathbf{x_j}$ est centrée par soustraction de sa moyenne $\bar{x_j}$ puis standardisée par division par son écart type $\sigma_j$. Notons $\mathbf{z_j}$ la version standardisée de la variable $\mathbf{x_j}$.
+$$
+z_{ij} = \frac{x_{ij}-\bar{x_j}}{\sigma_j}
+$$
+Nous pouvons également centrer ou standardiser la cible. Supposons que nous choisissions de seulement centrer la cible. Nous exprimons la relation entre les paramètres inférés sur les variables standardisées et leurs valeurs sur l'échelle des variables non transformées.
+
+\begin{align*}
+ & \mathbf{\hat{y_i}} - \mathbf{\bar{y}} = \sum_{j=1}^{p} \hat{\beta_j} \left( \frac{x_{ij}-\bar{x_j}}{\sigma_j} \right) \\
+= \{& \text{arithmétique} \} \\
+ & \mathbf{\hat{y_i}} = \left( \mathbf{\bar{y}} - \sum_{j=1}^{p} \hat{\beta_j} \frac{\bar{x_j}}{\sigma_j} \right) +
+   \sum_{j=1}^{p} \frac{\hat{\beta_j}}{\sigma_j} x_{ij} \\
+\end{align*}
+
+Pour passer du modèle inféré sur les variables standardisées et la cible normalisée aux valeurs des paramètres sur les domaines originaux des variables, il faut donc ajouter une ordonnée à l'origine ("intercept") $\beta_0 = \mathbf{\bar{y}} - \sum_{j=1}^{p} \hat{\beta_j} \frac{\bar{x_j}}{\sigma_j}$ et remettre à l'échelle chaque paramètre $\beta_j$ en le multipliant par le facteur $\frac{1}{\sigma_j}$.
+
+## Visulation de l'effet sur les paramètres de différents niveaux de régularisation
+
+Sur notre exemple synthétique, nous affichons la fonction génératrice, le jeu de données et le polynôme de degré au plus sept découvert par régression ridge avec une valeur de $\lambda$ égale soit à $0$, soit à $10^{-4}$, soit à $1$.
+
+```{r}
+set.seed(1123)
+# Image par f d'un échantillon uniforme sur l'intervalle [0,1], avec ajout d'un
+# bruit gaussien de moyenne nulle et d'écart type 0.2
+data = gendat(10,0.2)
+
+par(mfrow=c(1,3))
+coef <- ridge(0, data, 7)
+plt(data,f,main=expression(paste(plain("Degré = "), 7, plain(", "), lambda,
+                                 plain(" = 0"))))
+pltpoly(coef)
+coef <- ridge(1E-4, data, 7)
+plt(data,f,main=expression(paste(plain("Degré = "), 7, plain(", "), lambda,
+                                 plain(" = 1E-4"))))
+pltpoly(coef)
+coef <- ridge(1, data, 7)
+plt(data,f,main=expression(paste(plain("Degré = "), 7, plain(", "), lambda,
+                                 plain(" = 1"))))
+pltpoly(coef)
+```
+
+Plus le coefficient de régularisation $\lambda$ est faible, moins il contraint les paramètres (c'est-à-dire, les coefficients du polynôme) à conserver de petites valeurs et plus le polynôme découvert peut être complexe, au risque de provoquer du sur-apprentissage et donc de limiter la capacité du modèle à bien prédire les étiquettes de nouvelles observations. A l'inverse, plus le coefficient de régularisation est élevé, plus le modèle découvert sera simple, au risque de sous-apprendre en ne modélisant pas convenablement les variations propres au processus qui a généré les observations.
+
+Pour mieux visualiser l'effet du coefficient de régularisation ridge, nous affichons les valeurs des coefficients du polynôme découvert pour différentes valeurs de $\lambda$. Plus $\lambda$ augmente, plus les coefficients du polynôme diminuent et tendent vers $0$.
+
+```{r}
+lambdas <- c(1E-5, 1E-4, 1E-3, 1E-2, 1E-1, 1)
+lcoef <- sapply(lambdas, ridge, data, 7)
+matplot(lambdas, t(lcoef), type=c("b"), pch=1, col=1:8, log="x")
+legend("topright", legend = 0:7, col=1:8, pch=1)
+```
+
+## Régularisation et complexité
+
+Essayons de mieux comprendre les raisons pour lesquelles la régularisation peut être efficace. Nous allons montrer qu'elle réduit la complexité d'un modèle prédictif. Dans ce contexte, qu'est-ce que la complexité ? C'est la sensibilité du modèle au bruit présent dans les données. Qu'est-ce que le bruit ? Il est possible de le définir après avoir fait l'hypothèse d'une famille de modèles qui auraient pu générer les données observées.
+
+Prenons l'exemple d'un modèle linéaire : $F(\mathbf{X}) = \mathbf{W}^T\mathbf{X} + b$. Posons ensuite $\mathbf{X^*} = \mathbf{X} + \mathbf{\epsilon}$ avec $\mathbf{\epsilon}$ un faible bruit ($\|\epsilon\|$ est petit). $\mathbf{X}$ et $\mathbf{X^*}$ étant proches, une hypothèse de régularité demande que $F(\mathbf{X})$ et $F(\mathbf{X^*})$ le soient aussi. La proximité de $F(\mathbf{X})$ et $F(\mathbf{X^*})$ peut se mesurer avec $|F(\mathbf{X}) - F(\mathbf{X^*})|$.
+
+\begin{align*}
+ & |F(\mathbf{X}) - F(\mathbf{X^*})| \\
+= \{& F(\mathbf{X}) = \mathbf{W}^T\mathbf{X} + b \} \\
+ & |\mathbf{W}^T\mathbf{X} - \mathbf{W}^T\mathbf{X^*}| \\
+= \{& \text{Algèbre linéaire} \} \\
+ & |\mathbf{W}^T(\mathbf{X}-\mathbf{X^*})| \\
+= \{& \mathbf{X^*} = \mathbf{X} + \mathbf{\epsilon} \} \\
+ & |\mathbf{W}^T \mathbf{\epsilon}| \\
+\leq \{& \text{Inégalité de Cauchy-Schwarz} \} \\
+ & \|\mathbf{W}\|_2 \|\mathbf{\epsilon}\|_2 \\
+\end{align*}
+
+Donc, en pénalisant les grandes valeurs de $\|\mathbf{W}\|_2$, on réduit la sensibilité du modèle à de petites perturbations dans les données observées. Autrement dit, par l'ajout de régularisation, les prédictions associées aux plus proches voisins de $\mathbf{X}$ tendent à être similaires à celle associée à $\mathbf{X}$.
+
+## Annexe code source
+
+```{r, code=readLines("03_tikhonov.R"), eval=FALSE}
+```

@@ -1,0 +1,124 @@
+# TP - Régression ridge à noyau - Correction
+
+```{r, include=FALSE}
+source("18_kernel_ridge_regression.R", local = knitr::knit_global())
+```
+
+```{r}
+set.seed(1123)
+```
+
+L'idée de cette expérimentation provient de la la référence [@rupp2015machine] qui introduit les concepts essentiels du machine learning pour un public de spécialistes en mécanique quantique.
+
+## Analyse de l'effet du paramètre $\sigma^2$ pour un noyau gaussien
+
+Soit un noyau gaussien $k$.
+$$
+k(\mathbf{x_j},\mathbf{x_i}) = exp\left(-\frac{1}{\sigma^2}\|\mathbf{x_j}-\mathbf{x_i}\|^2\right)
+$$
+
+Générer des points $x_i$, par exemple entre $-5$ et $5$.
+```{r}
+X <- seq(from=-5,to=5,by=0.1)
+```
+
+Générer la matrice des similarités (ou noyau) $\mathbf{K}$, résultat de l'application de la fonction $k$ à chaque paire de points $(x_i,x_j)$. Le faire pour $\sigma$ égal à $0.5$, $1$ ou $2$.
+```{r}
+K05 <- gausskernel(X,0.5^2)
+K1 <- gausskernel(X,1)
+K2 <- gausskernel(X,2^2)
+```
+
+Afficher la courbe du noyau en $0$, c'est-à-dire $k(0,x)$.
+```{r}
+zi <- which(X==0)
+KS <- cbind(K05[zi,],K1[zi,],K2[zi,])
+matplot(X,KS,type='l',lty=1:3,col=1:3)
+legend("topleft", legend = c('0.5','1','2'), col=1:3, lty=1:3)
+```
+
+Afficher la courbe obtenue par une combinaison linéaire aléatoire des similarités entre une observation $x$ et l'ensemble des observations $x_i$ :
+$$
+f(\mathbf{x}) = \sum_{i=1}^{n} \alpha_i k(\mathbf{x},\mathbf{x_i})
+$$
+
+Comparer le type de courbes obtenues pour les différentes valeurs de $\sigma$.
+```{r}
+alphas=runif(length(X),min=-1,max=1)
+yh05 <- K05 %*% alphas
+yh1 <- K1 %*% alphas
+yh2 <- K2 %*% alphas
+yhs <- cbind(yh05,yh1,yh2)
+matplot(X,yhs,type='l',lty=1:3,col=1:3)
+legend("topleft", legend = c('0.5','1','2'), col=1:3, lty=1:3)
+```
+
+## Régression ridge à noyau sur un petite exemple synthétique
+
+Soit un jeu de données synthétique construit à partir de la fonction $cos(x)$ appliquée aux points $\left\{0,\pi/8,2\pi/8,3\pi/8,4\pi/8\right\}$
+```{r}
+X <- pi/8 * seq(0,4)
+y <- cos(X)
+```
+
+Apprendre un modèle par régression ridge à noyau sur ce jeu de données. Dans un premier temps :
+
+- considérer le jeu de données non bruité
+- fixer l'hyper-paramètre de régularisation $\lambda$ presque à zéro (e.g., $10^{-14}$)
+- comparer différentes valeurs de l'hyper-paramètre $\sigma$ qui contrôle le rayon du noyau gaussien (e.g., $0.01, 0.5, 10^4$)
+- Afficher à chaque fois : le jeu de données, la courbe théorique, la courbe prédite, les courbes gaussiennes centrées sur chaque observation du jeu d'entraînement et dont la combinaison linéaire est la courbe prédite.
+
+```{r}
+plotEachGaussian <-
+function(X,y,km)
+{
+  xplt <- seq(0,pi/2,by=0.01)
+
+  # plot the individual gaussian associated with each observation in X
+  # we use the code from predict.krr
+  newdata <- as.matrix(xplt)
+  newdata <- scale(newdata,center=attr(km$X,"scaled:center"),
+                           scale=attr(km$X,"scaled:scale"))
+  n <- nrow(km$X)
+  nn <- nrow(newdata)
+  K <- gausskernel(rbind(newdata,km$X),sigma2=km$sigma2)[1:nn,(nn+1):(nn+n)]
+  matplot(xplt,sweep(K,2,km$coef,'*'),type='l',lty=2:n+1,col=2:n+1,
+          ylim=c(-1,1),
+          xlab='x',ylab='y', main=paste('sigma2=',km$sigma2,'lambda=',km$lambda))
+
+  # plot the true function and the dataset
+  points(xplt,cos(xplt),type='l',lty=1,col=1,lwd=2)
+  points(X,y)
+
+  # plot the prediction for the training set
+  points(x=X,y=km$yh,pch=2)
+
+  # plot the prediction for new points
+  yh <- predict(km,xplt)
+  points(xplt,yh,type='l',lty=1, col=1, lwd=1)
+}
+```
+
+```{r}
+km <- krr(X,y,sigma2=0.01^2,lambdas=c(10^(-14)))
+plotEachGaussian(X,y,km)
+```
+
+```{r}
+km <- krr(X,y,sigma2=0.5^2,lambdas=c(10^(-14)))
+plotEachGaussian(X,y,km)
+```
+
+```{r}
+km <- krr(X,y,sigma2=(10^4)^2,lambdas=c(10^(-14)))
+plotEachGaussian(X,y,km)
+```
+
+Ensuite, vérifier le bon fonctionnement de l'approche proposée en cours qui fixe $\sigma^2$ au nombre de dimensions du jeu de données et qui détermine la valeur de $\lambda$ par validation croisée un contre tous. Discuter les rôles complémentaires des hyperparamètres $\sigma^2$ et $\lambda$.
+
+```{r}
+km <- krr(X,y)
+plotEachGaussian(X,y,km)
+```
+
+De nombreuses expériences complémentaires sont intéressantes à mener (comme étudier l'effet de l'ajout de bruit, etc.).

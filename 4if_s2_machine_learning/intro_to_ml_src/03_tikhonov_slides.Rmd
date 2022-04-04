@@ -1,0 +1,127 @@
+---
+title: "03 Régularisation de Tikhonov"
+author: Pierre-Edouard Portier
+date: mars 2022
+output: beamer_presentation
+---
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("03_tikhonov.R", local = knitr::knit_global())
+```
+
+# Problèmes linéaires mal posés
+
+- Pas de solution unique pour $\mathbf{X}\boldsymbol\beta=\mathbf{y}$ avec $n<p$
+- Avec $n \geq p$, colinéarités $\leadsto$ solution _irrégulière_
+
+\[
+\left( \begin{array}{cc}
+1 & 1 \\
+1 & 1.00001 \\
+\end{array} \right)
+\left( \begin{array}{c}
+\beta_1 \\ \beta_2
+\end{array} \right)
+=
+\left( \begin{array}{c}
+1 \\ 0.99
+\end{array} \right)
+\]
+
+- Solution optimale  : $\boldsymbol\beta^T = (1001,-1000)$
+  - $(1,2)$ projetée sur $-999$
+- Solution approchée préférable : $\boldsymbol\beta^T = (0.5,0.5)$
+  - $(1,2)$ projetée sur $1.5$
+
+# Régularisation de Tikhonov ou régression ridge
+
+- Préférence pour les petits coefficients
+- Mesurée par $\|\boldsymbol\beta\|_1 = |\beta_1|+|\beta_2|+\dots$
+- Ou par $\|\boldsymbol\beta\|_2^2 = \beta_1^2+\beta_2^2+\dots$
+
+$$
+\begin{aligned}
+& \min_{\boldsymbol\beta} \|\mathbf{X}\boldsymbol\beta-\mathbf{y}\|^2_2 + \lambda \|\boldsymbol\beta\|^2_2 \\
+& avec \quad 0 \leq \lambda
+\end{aligned}
+$$
+
+- Résolution par annulation de la dérivée
+
+$$
+\begin{aligned}
+ & \mathbf{0} = 2\mathbf{X}^T\mathbf{X}\boldsymbol\beta - 2\mathbf{X}^T\mathbf{y} + 2\lambda\boldsymbol\beta \\
+=& \\
+ & \left( \mathbf{X}^T\mathbf{X} + \lambda \mathbf{I}_{n\times n} \right) \boldsymbol\beta = \mathbf{X}^T \mathbf{y}
+\end{aligned}
+$$
+
+# Standardisation
+
+- Contraction vers $0$ de $\beta_i^2$
+- Intensité de la régularisation dépend de l'échelle de la variable
+- Mise à l'échelle des variables par standardisation
+  - $z_{ij} = \frac{x_{ij}-\bar{x_j}}{\sigma_j}$
+- Possible de seulement centrer $\mathbf{y}$
+
+$$
+\begin{aligned}
+ & \mathbf{\hat{y_i}} - \bar{\mathbf{y}} = \sum_{j=1}^{p} \hat{\beta_j} \left( \frac{x_{ij}-\bar{x_j}}{\sigma_j} \right) \\
+= \{& \text{arithmétique} \} \\
+ & \mathbf{\hat{y_i}} = \left( \bar{\mathbf{y}} - \sum_{j=1}^{p} \hat{\beta_j} \frac{\bar{x_j}}{\sigma_j} \right) +
+   \sum_{j=1}^{p} \frac{\hat{\beta_j}}{\sigma_j} x_{ij} \\
+\end{aligned}
+$$
+
+# Exemple
+
+```{r, echo=FALSE}
+set.seed(1123)
+# Image par f d'un échantillon uniforme sur l'intervalle [0,1], avec ajout d'un
+# bruit gaussien de moyenne nulle et d'écart type 0.2
+data = gendat(10,0.2)
+
+par(mfrow=c(1,3))
+coef <- ridge(0, data, 7)
+plt(data,f,main=expression(paste(plain("Degré = "), 7, plain(", "), lambda,
+                                 plain(" = 0"))))
+pltpoly(coef)
+coef <- ridge(1E-4, data, 7)
+plt(data,f,main=expression(paste(plain("Degré = "), 7, plain(", "), lambda,
+                                 plain(" = 1E-4"))))
+pltpoly(coef)
+coef <- ridge(1, data, 7)
+plt(data,f,main=expression(paste(plain("Degré = "), 7, plain(", "), lambda,
+                                 plain(" = 1"))))
+pltpoly(coef)
+```
+
+# Convergence des coefficients vers $0$
+
+```{r, echo=FALSE}
+lambdas <- c(1E-5, 1E-4, 1E-3, 1E-2, 1E-1, 1)
+lcoef <- sapply(lambdas, ridge, data, 7)
+matplot(lambdas, t(lcoef), type=c("b"), pch=1, col=1:8, log="x")
+legend("topright", legend = 0:7, col=1:8, pch=1)
+```
+
+# Régularisation et complexité
+
+- $F(\mathbf{X}) = \mathbf{W}^T\mathbf{X} + b$
+- $\mathbf{X^*} = \mathbf{X} + \mathbf{\epsilon}$
+- Régularité : $\mathbf{X}$ et $\mathbf{X^*}$ proches $\leadsto$ $F(\mathbf{X})$ et $F(\mathbf{X^*})$ proches
+
+$$
+\begin{aligned}
+ & |F(\mathbf{X}) - F(\mathbf{X^*})| \\
+= \{& F(\mathbf{X}) = \mathbf{W}^T\mathbf{X} + b \} \\
+ & |\mathbf{W}^T\mathbf{X} - \mathbf{W}^T\mathbf{X^*}| \\
+= \{& \text{Algèbre linéaire} \} \\
+ & |\mathbf{W}^T(\mathbf{X}-\mathbf{X^*})| \\
+= \{& \mathbf{X^*} = \mathbf{X} + \mathbf{\epsilon} \} \\
+ & |\mathbf{W}^T \mathbf{\epsilon}| \\
+\leq \{& \text{Inégalité de Cauchy-Schwarz} \} \\
+ & \|\mathbf{W}\|_2 \|\mathbf{\epsilon}\|_2 \\
+\end{aligned}
+$$

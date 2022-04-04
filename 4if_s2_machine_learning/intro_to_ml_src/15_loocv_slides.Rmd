@@ -1,0 +1,164 @@
+---
+title: "15 Validation croisée un contre tous"
+author: Pierre-Edouard Portier
+date: mars 2022
+output:
+  beamer_presentation:
+    incremental: false
+---
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("04_validation_croisee.R", local = knitr::knit_global())
+source("15_loocv.R", local = knitr::knit_global())
+```
+
+# Validation croisée un contre tous (Leave-One-Out Cross-Validation)
+
+>- Validation croisée à $n$-plis !
+>- $\hat{\boldsymbol\beta}_\lambda^{(-i)} = \left( \mathbf{X^{(-i)}}^T\mathbf{X^{(-i)}} + \lambda\mathbf{I}  \right)^{-1} \mathbf{X^{(-i)}}^T \mathbf{y^{(-i)}}$
+>- $LOO_\lambda = \frac{1}{n} \sum_{i=1}^{n} \left( y_i - \mathbf{x_i}^T \hat{\boldsymbol\beta}_\lambda^{(-i)} \right)^2$
+>- $\mathbf{X^{(-i)}}^T\mathbf{X^{(-i)}} + \lambda\mathbf{I} = \mathbf{X^T}\mathbf{X} + \lambda\mathbf{I} - \mathbf{x_i}\mathbf{x_i}^T$
+
+# Matrice chapeau
+
+>- $\mathbf{\hat{y}_\lambda} = \mathbf{X}\hat{\boldsymbol\beta}_\lambda = \mathbf{X} \left( \mathbf{X}^T \mathbf{X} + \lambda \mathbf{I}\right)^{-1} \mathbf{X}^T \mathbf{y} = \mathbf{H} \mathbf{y}$
+>- $h_{ij}$ est l'influence qu'exerce $y_j$ sur la prédiction $\hat{y}_i$
+>- $h_{ii}$, l'influence de $y_i$ sur $\hat{y}_i$ identifie les observations à l'influence prépondérante
+>- $\mathbf{x_i}^T \left( \mathbf{X}^T \mathbf{X} + \lambda \mathbf{I}\right)^{-1} \mathbf{x_i} = h_{ii} \triangleq h_i$
+>- $\mathbf{\hat{y}_\lambda} = \sum_{d_j>0} \mathbf{u_j} \frac{d_j^2}{d_j^2 + \lambda} \mathbf{u_j}^T\mathbf{y}$
+>- $h_i = \sum_{d_j>0} \frac{d_j^2}{d_j^2 + \lambda} u_{ij}$
+>- $tr(\mathbf{H(\lambda)}) = \sum_i h_i = \sum_{d_j>0} \frac{d_j^2}{d_j^2 + \lambda}$
+>- $tr(\mathbf{H(0)}) = rang(\mathbf{X})$ ou \emph{degré de liberté} de la régression
+
+# Formule de Morrison et calcul efficace de LOOCV
+
+>- $\left( \mathbf{A} + \mathbf{u}\mathbf{v}^T \right)^{-1} = \mathbf{A}^{-1} - \frac{\mathbf{A}^{-1}\mathbf{u}\mathbf{v}^T\mathbf{A}^{-1}}{1 + \mathbf{v}^T\mathbf{A}^{-1}\mathbf{u}}$
+>- Permet de simplifier $\left( \mathbf{X^{(-i)}}^T\mathbf{X^{(-i)}} + \lambda\mathbf{I}  \right)^{-1}$ pour obtenir...
+>- $$y_i - \hat{y}^{(-i)}_{\lambda i} = \frac{y_i - \hat{y}_{\lambda i}}{1 - h_i}$$
+>- $$
+\begin{aligned}
+ &LOO_\lambda = \frac{1}{n} \sum_{i=1}^{n} \left( \frac{y_i - \hat{y}_{\lambda i}}{1 - h_i} \right)^2 \\
+ &\text{avec } h_i = \sum_{d_j>0} \frac{d_j^2}{d_j^2 + \lambda} u_{ij}
+\end{aligned}
+$$
+>- Cette mesure peut être instable pour des $h_i$ proches de $1$...
+
+# Validation croisée généralisée (GCV)
+
+$$
+\begin{aligned}
+ &GCV_\lambda = \frac{1}{n} \sum_{i=1}^{n} \left( \frac{y_i - \hat{y}_{\lambda i}}{1 - \frac{1}{n} tr(\mathbf{H}(\lambda))} \right)^2 \\
+ &\text{avec } tr(\mathbf{H}(\lambda)) = \sum_{d_j>0} \frac{d_j^2}{d_j^2 + \lambda}
+\end{aligned}
+$$
+
+# Implémentation de GCV
+
+\small
+```{r, eval=FALSE}
+ridgeSVD <-
+function(X, y)
+{
+  n <- nrow(X); X.init <- X; y.init <- y
+  X <- scale(X); ym <- mean(y); y <- y - ym
+  Xs <- svd(X); d <- Xs$d
+  function(lambda) {
+    coef <- c(Xs$v %*% ((d / (d^2 + lambda)) * (t(Xs$u) %*% y)))
+    coef <- coef / attr(X,"scaled:scale")
+    inter <- ym - coef %*% attr(X,"scaled:center")
+    coef <- c(inter, coef)
+    trace.H <- sum(d^2 / (d^2 + lambda))
+    yh <- coef[1] + X.init%*%coef[-1]
+    gcv <- sum( ((y.init - yh) / (1 - (trace.H / n))) ^ 2 ) / n
+    list(coef = coef, gcv = gcv)
+  }
+}
+```
+\normalsize
+
+# Implémentation de GCV
+
+\small
+```{r, eval=FALSE}
+ridge <- function(X, y, lambdas) {
+  p <- ncol(X); errs <- double(length(lambdas))
+  coefs <- matrix(data = NA, nrow = length(lambdas), ncol = p+1)
+  ridge <- ridgeSVD(X, y); idx <- 1
+  for(lambda in lambdas) {
+    res <- ridge(lambda)
+    coefs[idx,] <- res$coef
+    errs[idx] <- res$gcv
+    idx <- idx + 1
+  }
+  err.min <- min(errs)
+  lambda.best <- lambdas[which(errs == err.min)]
+  coef.best <- coefs[which(errs == err.min),]
+  yh <- coef.best[1] + X%*%coef.best[-1]
+  mae <- mean(abs(yh - y))
+  r <- list(coef = coef.best, lambda = lambda.best, mae = mae,
+            coefs=coefs, lambdas=lambdas)
+  class(r) <- "ridge" ; return(r)
+}
+```
+\normalsize
+
+# Exemple
+
+\small
+```{r, eval=FALSE}
+set.seed(1123)
+n <- 100
+deg <- 8
+data = gendat(n,0.2)
+splitres <- splitdata(data,0.8)
+entr <- splitres$entr
+test <- splitres$test
+lambdas <- 10^seq(2,-8,by=-1)
+entr.poly <- outer(c(entr$X), 1:deg, "^")
+rm <- ridge(entr.poly, entr$Y, lambdas)
+plt(entr,f)
+pltpoly(rm$coef)
+```
+\normalsize
+
+# Exemple - jeu d'entraînement
+
+```{r, echo=FALSE}
+set.seed(1123)
+n <- 100
+deg <- 8
+data = gendat(n,0.2)
+splitres <- splitdata(data,0.8)
+entr <- splitres$entr
+test <- splitres$test
+lambdas <- 10^seq(2,-8,by=-1)
+entr.poly <- outer(c(entr$X), 1:deg, "^")
+rm <- ridge(entr.poly, entr$Y, lambdas)
+plt(entr,f)
+pltpoly(rm$coef)
+```
+
+```{r, echo=FALSE}
+bestLambda <- rm$lambda
+maeTrain <- rm$mae
+```
+
+- $\lambda$ : `r bestLambda`
+- Erreur absolue moyenne sur le jeu d'entraînement : `r round(maeTrain,3)`
+
+# Exemple - jeu de test
+
+```{r, echo=FALSE}
+plt(test,f)
+pltpoly(rm$coef)
+```
+
+# Exemple - jeu de test
+
+```{r}
+testpred <- polyeval(rm$coef, test$X)
+testmae <- mean(abs(testpred - test$Y))
+```
+
+- erreur absolue moyenne de `r round(testmae,3)` sur le jeu de test

@@ -1,0 +1,126 @@
+# Projection aléatoire - `sinc` - Correction
+
+```{r, include=FALSE}
+source("15_loocv.R", local = knitr::knit_global())
+```
+
+```{r}
+set.seed(1123)
+```
+
+L'idée de cette expérimentation provient de la la référence [@huang2006extreme] qui introduit le modèle prédictif dit _Extreme Learning Machine_.
+
+## Générer un jeu de données synthétique avec la fonction `sinc`
+
+Utiliser la fonction `sinc` pour générer un jeu de données $\{y_i,x_i\}$.
+$$
+y(x)=
+\begin{cases}
+sin(x)/x & x\neq0, \\
+1 & x=0
+\end{cases}
+$$
+
+Les $x_i$ sont distribués de façon uniforme sur l'intervalle $(-10,10)$. Un bruit (par exemple uniforme ou gaussien) est ajouté aux étiquettes $y_i$.
+
+Nous commençons par définir la fonction `sinc`.
+```{r}
+sinc <-
+function(x)
+{
+  y <- sin(x) / x
+  y[x==0] <- 1
+  return(y)
+}
+```
+
+Puis nous créons le jeu de données.
+```{r}
+n <- 100
+X <- runif(n, min=-10, max=10)
+X <- as.matrix(X)
+y <- sinc(X) + runif(n, min=-0.2, max=0.2)
+```
+
+Et nous l'affichons.
+```{r}
+xplt <- seq(-10,10,length.out=100)
+plot(xplt,sinc(xplt), type='l')
+points(X,y, pch=20)
+```
+
+## Régression ridge après projections non-linéaires aléatoires
+
+Créer un modèle qui a la forme d'un réseau de neurones à une couche.
+$$
+\hat{y}_i = \sum_{j=1}^{m} \beta_j g\left( \mathbf{w_j}\mathbf{x_i}^T + b_j \right) \quad i=1,\dots,n
+$$
+Cependant, contrairement à un réseau de neurones, les $m$ vecteurs $\mathbf{w_j}$ et scalaires $b_j$ sont initialisés aléatoirement et ne sont jamais modifiés. La fonction $g$ est une transformation non-linéaire (par ex., la fonction ReLU $g(x)=max(0,x)$, ou la fonction sigmoïde $g(x)=1/(1+exp(-x))$, etc.). Seuls les paramètres $\beta_j$ sont inférés par régression ridge en utilisant la matrice $\mathbf{H}$ ci-dessous au lieu de la martice $\mathbf{X}$ initiale.
+$$
+\mathbf{H} =
+\left[ \begin{array}{ccc}
+g\left( \mathbf{w_1}\mathbf{x_1}^T + b_1 \right) & \dots & g\left( \mathbf{w_m}\mathbf{x_1}^T + b_m \right) \\
+\vdots & \dots & \vdots \\
+g\left( \mathbf{w_1}\mathbf{x_n}^T + b_1 \right) & \dots & g\left( \mathbf{w_m}\mathbf{x_n}^T + b_m \right) \\
+\end{array} \right]
+$$
+
+Étudier les effets de la taille du jeu d'apprentissage, de la quantité de bruit, de l'hyperparamètre de régularisation, du nombre de transformations aléatoires, de la fonction non linéaire choisie, etc.
+
+Nous commençons par créer le modèle en étendant la régression ridge.
+```{r}
+relu <- function(x){ifelse(x>=0,x,0)}
+logistic <- function(x){1/(1+exp(-x))}
+
+elm <-
+function(X,y,m=2000,method=c('logistic', 'ReLU'),lambdas=NULL)
+{
+  method <- match.arg(method)
+
+  X <- as.matrix(X)
+  p <- ncol(X)
+  W <- matrix(runif(p*m, min=-1, max=1), nrow=p, ncol=m)
+  H <- X%*%W
+  b <- runif(m)
+  H <- sweep(H,2,b,'+')
+
+  if(method=='logistic') {
+    H <- logistic(H)
+  } else if(method=='ReLU') {
+    H <- relu(H)
+  }
+
+  rm <- ridge(H,y,lambdas)
+  r <- list(ridge = rm,
+            m = m,
+            method=method,
+            W = W,
+            b = b)
+  class(r) <- "elm"
+  return(r)
+}
+
+predict.elm <-
+function(o, newdata)
+{
+  newdata <- as.matrix(newdata)
+  H <- newdata %*% o$W
+  H <- sweep(H,2,o$b,'+')
+  if(o$method=='logistic') {
+    H <- logistic(H)
+  } else if(o$method=='ReLU') {
+    H <- relu(H)
+  }
+
+  yh <- predict(o$ridge,H)
+}
+```
+
+Nous appliquons le modèle au jeu de données synthétique.
+```{r}
+rm <- elm(X,y,m=500,method='logistic')
+yh <- predict(rm,xplt)
+plot(xplt,sinc(xplt),type='l',col='blue')
+lines(xplt,yh,type='l',col='green')
+points(X,y, pch=20)
+```

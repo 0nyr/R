@@ -1,0 +1,131 @@
+---
+title: "19 Approximation de Nyström"
+author: Pierre-Edouard Portier
+date: mars 2022
+output:
+  beamer_presentation:
+    incremental: false
+---
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("04_validation_croisee.R", local = knitr::knit_global())
+source("18_kernel_ridge_regression.R", local = knitr::knit_global())
+```
+
+# Approximation de Nyström d'un noyau
+
+>- $(\mathbf{x_i},y_i) \quad \text{avec} \quad i=1,\dots,n \quad ; \quad y_i \in \mathbb{R} \quad ; \quad \mathbf{x_i} \in \mathbb{R}^d$
+>- Noyau $\mathbf{K}$
+$$
+\mathbf{K} =
+\left[
+\begin{array}{ccc}
+k(\mathbf{x_1},\mathbf{x_1}) & \dots & k(\mathbf{x_1},\mathbf{x_n}) \\
+\dots & \dots & \dots \\
+k(\mathbf{x_n},\mathbf{x_1}) & \dots & k(\mathbf{x_n},\mathbf{x_n}) \\
+\end{array}
+\right]
+$$
+>- Approximation de rang $m$ de $\mathbf{K}$
+$$
+\mathbf{K} \approx \mathbf{U}\boldsymbol\Lambda\mathbf{U}^T \quad ; \quad \mathbf{U} \in \mathbb{R}^{n \times m} \quad ; \quad \boldsymbol\Lambda \in \mathbb{R}^{m \times m}
+$$
+
+# Approximation de Nyström d'un noyau
+
+>- Sélection de $m$ observations qui sont les centres pour les calculs de similarités
+$$
+\mathbf{K} =
+\left[
+\begin{array}{cc}
+\mathbf{K_{11}} & \mathbf{K_{21}^T}  \\
+\mathbf{K_{21}} & \mathbf{K_{22}}  \\
+\end{array}
+\right]
+\quad ; \quad
+\mathbf{K_{11}} \in \mathbb{R}^{m \times m}
+\quad ; \quad
+\mathbf{K_{21}} \in \mathbb{R}^{(n-m) \times m}
+$$
+
+>- Objectif : ne pas évaluer $\mathbf{K_{22}}$
+
+# Approximation de Nyström d'un noyau
+
+>-
+$$
+\mathbf{K} \approx
+\left[
+\begin{array}{c}
+\mathbf{U_1}  \\
+\mathbf{U_2}  \\
+\end{array}
+\right]
+\boldsymbol\Lambda
+\left[
+\begin{array}{c}
+\mathbf{U_1}  \\
+\mathbf{U_2}  \\
+\end{array}
+\right]^T
+=
+\left[
+\begin{array}{cc}
+\mathbf{U_1}\boldsymbol\Lambda\mathbf{U_1}^T & \mathbf{U_1}\boldsymbol\Lambda\mathbf{U_2}^T \\
+\mathbf{U_2}\boldsymbol\Lambda\mathbf{U_1}^T & \mathbf{U_2}\boldsymbol\Lambda\mathbf{U_2}^T \\
+\end{array}
+\right]
+$$
+
+$$
+\mathbf{U_1} \in \mathbb{R}^{m \times m}
+\quad ; \quad
+\mathbf{U_2} \in \mathbb{R}^{(n-m) \times m}
+$$
+
+>- $\mathbf{U_2} \approx \mathbf{K_{21}} \mathbf{U_1} \boldsymbol\Lambda^{-1}$
+
+>- $\mathbf{K_{22}} \approx \left(\mathbf{K_{21}} \mathbf{K_{11}}^{-1/2}\right) \left(\mathbf{K_{21}} \mathbf{K_{11}}^{-1/2}\right)^T$
+
+>- $\mathbf{K} \approx \boldsymbol\Phi \boldsymbol\Phi^T$
+$$
+\boldsymbol\Phi =
+\left[
+\begin{array}{c}
+\mathbf{K_{11}}^{1/2}  \\
+\mathbf{K_{21}} \mathbf{K_{11}}^{-1/2}  \\
+\end{array}
+\right]
+$$
+
+# Calcul de l'approximation de Nyström
+
+>-
+$$
+\mathbf{C} =
+\left[
+\begin{array}{c}
+\mathbf{K_{11}}  \\
+\mathbf{K_{21}}  \\
+\end{array}
+\right]
+$$
+
+>-
+$$
+\begin{aligned}
+ & \mathbf{K} \approx \mathbf{C} \mathbf{K_{11}}^{-1} \mathbf{C}^T \\
+= \{& \mathbf{K_{11}} = \mathbf{U}\boldsymbol\Sigma\mathbf{U}^T \} \\
+ & \mathbf{K} \approx \mathbf{C} \mathbf{U}\boldsymbol\Sigma^{-1}\mathbf{U}^T \mathbf{C}^T \\
+= \{& \mathbf{L} \triangleq \mathbf{C} \mathbf{U}\boldsymbol\Sigma^{-1/2} \} \\
+ & \mathbf{K} \approx \mathbf{L}\mathbf{L}^T
+\end{aligned}
+$$
+
+# Approximation de Nyström et régression ridge à noyau
+
+>- $\mathbf{G} \triangleq \mathbf{K} + \lambda \mathbf{I_n}$
+>- $\boldsymbol\alpha_\lambda = \mathbf{G}^{-1} \mathbf{y}$
+>- $f(\mathbf{x}) = \sum_{i=1}^{n} \alpha_i k(\mathbf{x},\mathbf{x_i})$
+>- $\mathbf{G}^{-1} \approx \lambda^{-1}\mathbf{I_n} - \lambda^{-1}\mathbf{L}\left(\lambda\mathbf{I_m}+\mathbf{L}^T\mathbf{L}\right)^{-1}\mathbf{L}^T$

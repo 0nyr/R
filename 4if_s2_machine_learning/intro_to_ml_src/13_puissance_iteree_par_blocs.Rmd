@@ -1,0 +1,63 @@
+# Puissance itérée par bloc et SVD
+
+## Principe et application à la décomposition en valeurs propres
+
+Nous avons vu précédemment que la méthode de la puissance itérée permet de calculer la plus grande valeur propre et un vecteur propre associé pour une matrice carrée $\mathbf{A}$. La décomposition QR est au cœur d'une approche élégante pour étendre la méthode de la puissance itérée au calcul des $S$ plus grandes valeurs propres et leurs vecteurs propres associés.
+
+Une itération consiste à multiplier $\mathbf{A}$ par un bloc $\mathbf{V} \in \mathbb{R}^{N \times S}$ de $S$ vecteurs colonnes. Si ce processus est répété, nous nous attendons à trouver le même résultat que pour la méthode de la puissance itérée : chaque colonne de $\mathbf{V}$ convergera vers le (même) plus grand vecteur propre.
+
+Mais si, par une décomposition QR, nous forçons les colonnes de $\mathbf{V}$ à rester orthogonales, pour une matrice $\mathbf{A}$ symétrique, le processus itératif fera tendre ces colonnes vers différents vecteurs propres et la diagonale de $\mathbf{R}$ contiendra les valeurs propres correspondantes.
+
+\begin{algorithm}[H]
+\DontPrintSemicolon
+\NoCaptionOfAlgo
+\SetAlgoLined
+\SetKwInput{Res}{Résultat}
+\SetKwInOut{Input}{Entrée}\SetKwInOut{Output}{Sortie}
+\SetKwFor{Tq}{tant que}{faire}{fintq}
+\SetKw{KwTo}{à}
+\Res{Vecteurs propres d'une matrice symétrique par la méthode de la puissance itérée par bloc}
+\Input{$\mathbf{A} \in \mathbb{R}^{N \times N}$ symétrique \\
+  $\mathbf{V} \in \mathbb{R}^{N \times S}$}
+\Output{Les colonnes de $\mathbf{V}$ sont les $S$ premiers vecteurs propres. \\
+Les valeurs propres correspondantes sont sur la diagonale de $\mathbf{\Lambda}$.}
+\BlankLine
+\Tq{$err > \epsilon$}{
+  $\mathbf{B} \gets \mathbf{A}\mathbf{V}$ \;
+  $\mathbf{B} = \mathbf{Q}\mathbf{R}$ \;
+  $\mathbf{V} \gets S \text{ premières colonnes de } \mathbf{Q}$ \;
+  $\mathbf{\Lambda} \gets S \text{ premières valeurs diagonales de } R$ \;
+  $err \gets \|\mathbf{A}\mathbf{V} - \mathbf{V}\mathbf{\Lambda}\|$ \;
+}
+\caption{Puissance itérée par bloc pour les vecteurs propres}
+\end{algorithm}
+
+## Application à la décomposition en valeurs singulières
+
+Nous pouvons de même adapter l'algorithme de la puissance itérée au cas du SVD pour calculer les $S$ plus grandes valeurs singulières et les vecteurs singuliers associés pour une matrice $\mathbf{A} \in \mathbb{R}^{M \times N}$.
+
+\begin{algorithm}[H]
+\DontPrintSemicolon
+\NoCaptionOfAlgo
+\SetAlgoLined
+\SetKwInput{Res}{Résultat}
+\SetKwInOut{Input}{Entrée}\SetKwInOut{Output}{Sortie}
+\SetKwFor{Tq}{tant que}{faire}{fintq}
+\SetKw{KwTo}{à}
+\Res{Valeurs singulières d'une matrice symétrique par la méthode de la puissance itérée par bloc}
+\Input{$\mathbf{A} \in \mathbb{R}^{M \times N}$ \\
+  $\mathbf{V} \in \mathbb{R}^{N \times S}$ peut être initialisée avec des $1$ sur la diagonale principale et des $0$ ailleurs.}
+\Output{$\mathbf{U} \in \mathbb{R}^{M \times S}, \mathbf{V} \in \mathbb{R}^{N \times S}$ \\
+  $\mathbf{\Sigma} = diag(\sigma_1, \sigma_2, \dots, \sigma_S)$ \\
+  telles que $\mathbf{A}\mathbf{V} = \mathbf{U}\mathbf{\Sigma}$}
+\BlankLine
+\Tq{$err > \epsilon$}{
+  $\mathbf{A}\mathbf{V} = \mathbf{Q}\mathbf{R}$ \;
+  $\mathbf{U} \gets S \text{ premières colonnes de } \mathbf{Q}$ \;
+  $\mathbf{A}^T\mathbf{U} = \mathbf{Q}\mathbf{R}$ \;
+  $\mathbf{V} \gets S \text{ premières colonnes de } \mathbf{Q}$ \;
+  $\mathbf{\Sigma} \gets S \text{ premières lignes et colonnes de } R$ \;
+  $err \gets \|\mathbf{A}\mathbf{V} - \mathbf{U}\mathbf{\Sigma}\|$ \;
+}
+\caption{Puissance itérée par bloc pour le SVD}
+\end{algorithm}

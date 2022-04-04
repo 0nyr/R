@@ -1,0 +1,81 @@
+# Méthode de la puissance itérée et SVD
+
+Nous montrons comment adapter la méthode de la puissance itérée au calcul de la plus grande valeur singulière et de ses deux vecteurs singuliers associés. Nous considérons une matrice de données rectangulaire $\mathbf{A}\in\mathbb{R}^{N\times M}$. Nous notons $\mathbf{U}\in\mathbb{R}^{N\times N}$ et $\mathbf{V}\in\mathbb{R}^{M\times M}$ les deux matrices orthogonales qui contiennent les vecteurs singuliers en colonnes. Nous notons enfin $\mathbf{\Sigma} = diag(\sigma_1,\sigma_2,\dots,\sigma_r,0,\dots)\in\mathbb{R}^{N\times M}$ la matrice qui contient sur sa diagonale principale les valeurs singulières, avec $r$ le range de $\mathbf{A}$. Nous avons donc :
+
+\begin{align*}
+\mathbf{A} &= \mathbf{U}\mathbf{\Sigma}\mathbf{V}^T & \text{$r$ est le rang de $\mathbf{A}$.} \\
+\mathbf{U} &= [\mathbf{u_1}, \mathbf{u_2},\dots,\mathbf{u_N}] & \text{avec $\mathbf{u_i}\in\mathbb{R}^N$, base orthonormale de $\mathbb{R}^N$} \\
+\mathbf{V} &= [\mathbf{v_1}, \mathbf{v_2},\dots,\mathbf{v_M}] & \text{avec $\mathbf{v_j}\in\mathbb{R}^M$, base orthonormale de $\mathbb{R}^M$} \\
+\mathbf{A} &= \sum_{k=1}^{r} \sigma_k \mathbf{u_k}\mathbf{v_k}^T &
+\end{align*}
+
+Nous allons montrer que la séquence ci-dessous converge vers $\sigma_1$, $\mathbf{u}$ et $\mathbf{v}$ tels que $\mathbf{A}\mathbf{v}=\sigma_1\mathbf{u}$.
+
+\begin{align*}
+\mathbf{w^{(k)}} &= \mathbf{A}\mathbf{v^{(k-1)}} & \alpha_k &= \|\mathbf{w^{(k)}}\|^{-1} & \mathbf{u^{(k)}} &= \alpha_k \mathbf{w^{(k)}} \\
+\mathbf{z^{(k)}} &= \mathbf{A}^T\mathbf{u^{(k)}} & \beta_k &= \|\mathbf{z^{(k)}}\|^{-1} & \mathbf{v^{(k)}} &= \beta_k \mathbf{z^{(k)}} \\
+err &= \|\mathbf{A}\mathbf{v^{(k)}} - \beta_k \mathbf{u^{(k)}}\| & \sigma_1 &= \beta_k & &
+\end{align*}
+
+Nous décomposons $\mathbf{v^{(0)}}\in\mathbb{R}^M$ dans la base orthonormée formée par les vecteurs $\mathbf{v_j}$ :
+\[
+\mathbf{v^{(0)}} = \sum_{j=1}^{M} y_j\mathbf{v_j} \quad \text{avec $y_j = \mathbf{v_j}^T\mathbf{v^{(0)}}$}
+\]
+
+Partant de ce $\mathbf{v^{(0)}}$, nous calculons les deux premières itérations :
+
+\begin{align*}
+\mathbf{w^{(1)}} &= \mathbf{A}\mathbf{v^{(0)}} = \sum_{j=1}^{r}\sigma_j y_j \mathbf{u_j} & \mathbf{u^{(1)}} &= \alpha_1 \sum_{j=1}^{r}\sigma_j y_j \mathbf{u_j} \\
+\mathbf{z^{(1)}} &= \mathbf{A}^T\mathbf{u^{(1)}} = \alpha_1 \sum_{j=1}^{r}\sigma_j^2 y_j \mathbf{v_j} & \mathbf{v^{(1)}} &= \alpha_1 \beta_1 \sum_{j=1}^{r}\sigma_j^2 y_j \mathbf{v_j} \\
+\mathbf{w^{(2)}} &= \mathbf{A}\mathbf{v^{(1)}} = \alpha_1 \beta_1 \sum_{j=1}^{r}\sigma_j^3 y_j \mathbf{u_j} & \mathbf{u^{(2)}} &= \alpha_2 \alpha_1 \beta_1 \sum_{j=1}^{r}\sigma_j^3 y_j \mathbf{u_j} \\
+\mathbf{z^{(2)}} &= \mathbf{A}^T\mathbf{u^{(2)}} = \alpha_2 \alpha_1 \beta_1 \sum_{j=1}^{r}\sigma_j^4 y_j \mathbf{v_j} & \mathbf{v^{(2)}} &= \alpha_2 \beta_2 \alpha_1 \beta_1 \sum_{j=1}^{r}\sigma_j^4 y_j \mathbf{v_j} \\
+\end{align*}
+
+Par induction, nous avons :
+
+\begin{align*}
+\mathbf{v^{(k)}} &= \delta_{2k} \sum_{j=1}^{r} \sigma_j^{2k} y_j \mathbf{v_j} & \text{Avec } \delta_{2k} &= \alpha_k \beta_k \alpha_{k-1} \beta_{k-1} \dots \alpha_1 \beta_1 \\
+\mathbf{u^{(k)}} &= \delta_{2k-1} \sum_{j=1}^{r} \sigma_j^{2k-1} y_j \mathbf{u_j} & \text{Avec } \delta_{2k-1} &= \alpha_{k+1} \alpha_k \beta_k \alpha_{k-1} \beta_{k-1} \dots \alpha_1 \beta_1 \\
+\end{align*}
+
+Par ailleurs, nous avons :
+
+\begin{align*}
+ & 1 \\
+= \{& \text{A chaque itération, la norme de $\mathbf{u^{(k)}}$ est maintenue égale à 1.} \} \\
+ & \|\mathbf{u^{(k)}}\|^2 \\
+= \{& \text{Par définition de $\mathbf{u^{(k)}}$ et car } \|\mathbf{u_j}\| = 1 \} \\
+ & \delta_{2k-1}^2 \sum_{j=1}^{r} \sigma_j^{4k-2} y_j^2 \\
+\end{align*}
+
+De même :
+
+\begin{align*}
+ & 1 \\
+= \phantom{\{}& \\
+ & \|\mathbf{v^{(k)}}\|^2 \\
+= \phantom{\{}& \\
+ & \delta_{2k}^2 \sum_{j=1}^{r} \sigma_j^{4k} y_j^2 \\
+\end{align*}
+
+Donc :
+\[
+\frac{\|\mathbf{u^{(k+1)}}\|^2}{\|\mathbf{v^{(k)}}\|^2} = 1 =
+\sigma_1^2 \left(\frac{\delta_{2k+1}^2}{\delta_{2k}^2}\right)
+\left(\frac{\sum_{j=1}^{n_1} y_j^2 \; + \; \sum_{j=n_1}^{r}\left(\frac{\sigma_j}{\sigma_1}\right)^{4k+2}y_j^2}
+{\sum_{j=1}^{n_1} y_j^2 \; + \; \sum_{j=n_1}^{r}\left(\frac{\sigma_j}{\sigma_1}\right)^{4k}y_j^2}\right)
+\]
+
+Ci-dessus, $n_1$ est la multiplicité de $\sigma_1$, c'est-à-dire le nombre de vecteurs singuliers indépendants associés à cette valeur singulière. En pratique, sur de "vraies" données, cette multiplicité sera presque toujours égale à $1$.
+
+Nous avons ainsi montré que :
+\[
+\lim\limits_{k \to \infty} \frac{\delta_{2k+1}}{\delta_{2k}} = \sigma_1
+\]
+
+Et :
+\begin{align*}
+ & \lim\limits_{k \to \infty} \|\mathbf{A}\mathbf{v^{(k)}} - \sigma_1 \mathbf{u^{(k)}}\| \\
+= \{& \mathbf{A}\mathbf{v^{(k)}} = \frac{\delta_{2k+1}}{\delta_{2k}} \mathbf{u^{(k+1)}}\} \\
+ & 0
+\end{align*}

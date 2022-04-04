@@ -1,0 +1,84 @@
+# Méthode des moindres carrés
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("02_moindres_carres.R", local = knitr::knit_global())
+```
+
+## Espace de fonctions
+
+Soit un espace vectoriel composé de fonctions. Une base de cet espace est un ensemble de fonctions ($f_1, f_2, \dots f_p$) tel que toute fonction de l'espace s'exprime comme combinaison linéaire des fonctions de base.
+\[
+f(\mathbf{x}) = \beta_1 f_1(\mathbf{x}) + \beta_2 f_2(\mathbf{x}) + \dots + \beta_p f_p(\mathbf{x})
+\]
+Pour un jeu de données $\left\{ \mathbf{x^{(k)}},y^{(k)}\right\}_{k=1}^{n}$ de taille $n=p$, les coefficients $\beta_i$ sont solution d'un système linéaire.
+\[
+\left( \begin{array}{ccccc}
+f_1(\mathbf{x^{(1)}}) & f_2(\mathbf{x^{(1)}}) & \dots & f_p(\mathbf{x^{(1)}}) \\
+f_1(\mathbf{x^{(2)}}) & f_2(\mathbf{x^{(2)}}) & \dots & f_p(\mathbf{x^{(2)}}) \\
+\dots & \dots & \dots & \dots \\
+f_1(\mathbf{x^{(n)}}) & f_2(\mathbf{x^{(n)}}) & \dots & f_p(\mathbf{x^{(n)}})
+\end{array} \right)
+\left( \begin{array}{c}
+\beta_1 \\ \beta_2 \\ \dots \\ \beta_p
+\end{array} \right)
+=
+\left( \begin{array}{c}
+y^{(1)} \\ y^{(2)} \\ \dots \\ y^{(n)}
+\end{array} \right)
+\]
+Nous notons ce système linéaire $\mathbf{X}\boldsymbol\beta = \mathbf{y}$.
+
+## Expression matricielle
+
+Le système linéaire $\mathbf{X}\boldsymbol\beta = \mathbf{y}$ avec $\mathbf{X} \in \mathbb{R}^{n \times p}$ n'a pas de solution quand le nombre d'observations dépasse le nombre de fonctions de base (c'est-à-dire, $n>p$). Une approche possible est alors de chercher une approximation $\mathbf{X}\boldsymbol\beta \approx \mathbf{y}$ qui minimise la somme des carrés des erreurs : $\|\mathbf{X}\boldsymbol\beta-\mathbf{y}\|^2_2$.
+
+\begin{align*}
+ & \|\mathbf{X}\boldsymbol\beta-\mathbf{y}\|^2_2 \\
+= \{ & \|\boldsymbol\beta\|_2 = \sqrt{\boldsymbol\beta\cdot\boldsymbol\beta} \} \\
+ & \left(\mathbf{X}\boldsymbol\beta-\mathbf{y}\right) \cdot \left(\mathbf{X}\boldsymbol\beta-\mathbf{y}\right) \\
+= \{ & \text{Par définition du produit scalaire euclidien} \} \\
+ & \left(\mathbf{X}\boldsymbol\beta-\mathbf{y}\right)^T \left(\mathbf{X}\boldsymbol\beta-\mathbf{y}\right) \\
+= \{ & \text{propriété de la transposition} \} \\
+ & \left(\boldsymbol\beta^T\mathbf{X}^T - \mathbf{y}^T \right) \left(\mathbf{X}\boldsymbol\beta-\mathbf{y}\right) \\
+= \{ & \text{multiplication} \} \\
+ & \boldsymbol\beta^T\mathbf{X}^T\mathbf{X}\boldsymbol\beta - \boldsymbol\beta^T\mathbf{X}^T\mathbf{y} - \mathbf{y}^T\mathbf{X}\boldsymbol\beta + \mathbf{y}^T\mathbf{y} \\
+= \{ & \mathbf{y}^T\mathbf{X}\boldsymbol\beta \text{ étant une valeur scalaire, } \mathbf{y}^T\mathbf{X}\boldsymbol\beta = \left(\mathbf{y}^T\mathbf{X}\boldsymbol\beta\right)^T = \boldsymbol\beta^T\mathbf{X}^T\mathbf{y} \} \\
+ & \boldsymbol\beta^T\mathbf{X}^T\mathbf{X}\boldsymbol\beta - 2\boldsymbol\beta^T\mathbf{X}^T\mathbf{y} + \mathbf{y}^T\mathbf{y}
+\end{align*}
+
+Cette dernière expression quadratique en $\boldsymbol\beta$ correspond à une surface convexe. Donc son minimum peut être calculé en annulant sa dérivée (penser à une courbe $y = a+bx+cx^2$ dont l'unique extremum est atteint lorsque la pente est nulle).
+
+\begin{align*}
+ & \mathbf{0} = 2\mathbf{X}^T\mathbf{X}\boldsymbol\beta - 2\mathbf{X}^T\mathbf{y} \\
+=& \\
+ & \mathbf{X}^T\mathbf{X}\boldsymbol\beta = \mathbf{X}^T\mathbf{y}
+\end{align*}
+
+Ainsi, quand $n>p$, la solution approximée $\hat{\boldsymbol\beta}$, telle que $\mathbf{X}\hat{\boldsymbol\beta} \approx \mathbf{y}$ par minimisation de la somme des carrés des erreurs, est la solution du système linéaire suivant où $\mathbf{X}^T\mathbf{X}$ est appelée la matrice de Gram.
+\[
+\mathbf{X}^T\mathbf{X} \boldsymbol\beta = \mathbf{X}^T\mathbf{y}
+\]
+
+## Méthode des moindres carrés appliquée à la régression polynomiale
+
+Pour un polynôme de degré $p-1$, les fonctions de base mentionnées ci-dessus sont : $f_1(x)=1$, $f_2(x)=x$, $f_3(x)=x^2$,..., $f_p(x)=x^{p-1}$. Elles permettent de définir la matrice des données $\mathbf{X}$ et la matrice de Gram $\mathbf{X}^T\mathbf{X}$.
+
+Nous reprenons l'exemple synthétique du précédent chapitre et nous résolvons le système linéaire correspondant à la matrice de Gram pour un polynôme de degré fixé.
+
+```{r}
+set.seed(1123)
+# Image par f d'un échantillon uniforme sur l'intervalle [0,1], avec ajout d'un
+# bruit gaussien de moyenne nulle et d'écart type 0.2
+data = gendat(10,0.2)
+coef = polyreg2(data,3)
+plt(data,f)
+pltpoly(coef)
+```
+
+Ce polynôme de degré trois modélise mieux la fonction génératrice inconnue que celui de degré quatre qui ne commettait aucune erreur sur les données observées.
+
+## Annexe code source
+
+```{r, code=readLines("02_moindres_carres.R"), eval=FALSE}
+```

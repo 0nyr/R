@@ -1,0 +1,237 @@
+# TP - Projection aléatoire - `housing` PCA - Correction
+
+```{r, include=FALSE}
+source("05_svd_pca.R", local = knitr::knit_global())
+```
+
+```{r}
+set.seed(1123)
+```
+
+## Présentation du jeu de données `housing`
+
+`housing` est un jeu de données célèbre aux nombreuses vertues pédagogiques^[https://www.kaggle.com/datasets/harrywang/housing]. Il permet d'expérimenter sur un problème de régression réaliste, viz. prédire la valeur médiane d'une maison en fonction des caractéristiques de son quartier. Après une phase d'exploration des données, comparer, sur un jeu de test, un modèle linéaire par régression ridge et un modèle par projection aléatoire.
+
+```{r cache=TRUE}
+housing <- read.csv(file="data/housing.csv",header=TRUE)
+str(housing)
+```
+
+Variable           | Type    | Commentaire
+-------------------|---------|------------------------------------
+longitude          | numeric | élevée pour un quartier à l'ouest
+latitude           | numeric | élevée pour un quartier au nord
+housing_median_age | numeric | âge médian d'une maison du quartier
+total_rooms        | numeric | total des pièces pour les maisons du quartier
+total_bedrooms     | numeric | total des chambres pour les maisons du quartier
+population         | numeric | nombre de résidents du quartier
+households         | numeric | nombre de familles du quartier
+median_income      | numeric | revenu médian des familles du quartier (USD 10k)
+median_house_value | numeric | valeur médiane d'une maison du quartier (USD)
+ocean_proximity    | factor  | estimation de la distance à l'océan
+
+## Prétraitements
+
+Nous transformons la variable `ocean_proximity`, pour l'instant représentée par une chaîne de caractères, en une variable catégorielle (ou facteur) qui sera représentée par un codage disjonctif complet (ou _one hot encoding_).
+
+```{r}
+housing$ocean_proximity <- as.factor(housing$ocean_proximity)
+summary(housing)
+```
+
+Nous remplaçons les valeurs manquantes pour la variable `total_bedrooms` par la médiane.
+
+```{r}
+housing$total_bedrooms[is.na(housing$total_bedrooms)] <- median(housing$total_bedrooms, na.rm=TRUE)
+sum(is.na(housing))
+```
+
+La catégorie `ISLAND` de la variable `ocean_proximity` est extrêmement sous représentée. Nous proposons de supprimer les observations qui lui correspondent.
+
+```{r}
+housing <- housing[housing$ocean_proximity != "ISLAND", ]
+nrow(housing)
+```
+
+## Analyse exploratoire par PCA
+
+Explorons les variables numériques par analyse en composantes principales.
+
+Nous sélectionnons les variables explicatives numériques dans une matrice $\mathbf{X}$.
+```{r}
+X <- housing[,c("longitude", "latitude", "housing_median_age", "total_rooms",
+                "total_bedrooms", "population", "households", "median_income",
+                "median_house_value")]
+```
+
+### Première analyse
+
+Nous réalisons une première fois l'analyse en composantes principales.
+```{r}
+fam <- fa(X) # fam pour 'factor analysis model'
+```
+
+Nous affichons le pourcentage de variance expliquée par chaque axe principal.
+```{r}
+fam$prctPrcp
+```
+
+Nous affichons, sur les deux premiers axes principaux, les centres des clusters qui contribuent le plus à ces axes.
+```{r}
+print(fam)
+```
+
+```{r}
+far <- away(fam)
+```
+
+Le cluster `r far$id` (`far$id`) contribue à expliquer `r round(fam$ctr[far$id,1]*100, 2)` % (`round(fam$ctr[far$id,1]*100, 2)`) de la variance du premier axe. Il est composé de `r far$size` (`far$size`) quartiers :
+```{r}
+housing[far$names,]
+```
+
+Ces quartiers semblent remarquables par le grand nombre de familles qui les habitent.
+```{r}
+boxplot(housing$households)
+```
+
+Nous remarquons que le cluster `r far$id` est principalement expliqué par le premier axe principal.
+```{r}
+fam$cos2[far$id,]
+```
+
+Les contributions des variables aux axes principaux nous montrent que le premier axe principal correspond surtout à un facteur taille de variables très corrélées : `total_rooms`, `total_bedrooms`, `population` et `households`.
+```{r}
+fam$varctr
+```
+
+### Seconde analyse
+
+Pour mieux visualiser des phénomènes intéressants qui seraient sinon masqués par ce facteur taille, nous proposons d'introduire de nouvelles variables pour décrire le nombre de pièces, le nombre de chambres et le nombre de personnes relativement au nombre de familles du quartier.
+```{r}
+housing['rooms_per_household'] <- housing['total_rooms'] / housing['households']
+housing['bedrooms_per_household'] <- housing['total_bedrooms'] / housing['households']
+housing['population_per_household'] <- housing['population'] / housing['households']
+```
+
+Nous recommençons l'analyse avec ces nouvelles variables.
+```{r}
+X <- housing[,c("longitude", "latitude", "housing_median_age", "rooms_per_household",
+                "bedrooms_per_household", "population_per_household", "median_income",
+                "median_house_value")]
+fam <- fa(X)
+```
+
+Nous affichons le pourcentage de variance expliquée par chaque axe principal.
+```{r}
+fam$prctPrcp
+```
+
+Nous affichons, sur les deux premiers axes principaux, les centres des clusters qui contribuent le plus à ces axes.
+```{r}
+print(fam)
+```
+
+```{r}
+far <- away(fam)
+```
+
+Le cluster `r far$id` contribue à expliquer `r round(fam$ctr[far$id,1]*100, 2)` % de la variance du premier axe. Il est composé de `r far$size` quartiers :
+```{r}
+housing[far$names,]
+```
+
+Cependant, la contribution du cluster `r far$id` à la variance est surtout expliquée par l'axe $3$. Ce dernier est lui-même surtout expliqué par les variables `rooms_per_household` et `bedrooms_per_household` (elles-mêmes très corrélées, ce n'est pas étonnant).
+```{r}
+fam$cos2[far$id,]
+```
+
+```{r}
+fam$varctr
+```
+
+Nous vérifions que ces quartiers correspondent effectivement à des valeurs très atypiques de la variable `rooms_per_household`.
+```{r}
+boxplot(housing$rooms_per_household)
+```
+
+Nous remarquons aussi que la valeurs des maisons sur l'un de ces quartiers est très élevée. En fait, c'est la plus grande valeur rencontrée sur ce jeu de données.
+```{r}
+capMedianHouseValue <- 500001
+nbCapMedianHouseValue <- table(housing$median_house_value)[as.character(capMedianHouseValue)]
+```
+
+Pour `r nbCapMedianHouseValue` quartiers, la valeur de la variable `median_house_value` est égale à `r capMedianHouseValue`. Il semble que les maisons dont la valeur dépasse une certaine somme aient été toutes enregistrées à cette somme maximale. Ces quartiers risquent d'avoir une mauvaise influence sur notre modèle prédictif. Nous proposons donc de les retirer.
+
+### Troisième analyse
+
+```{r}
+housing <- housing[housing$median_house_value < capMedianHouseValue, ]
+nrow(housing)
+```
+
+```{r}
+X <- housing[,c("longitude", "latitude", "housing_median_age", "rooms_per_household",
+                "bedrooms_per_household", "population_per_household", "median_income",
+                "median_house_value")]
+fam <- fa(X)
+```
+
+Nous affichons le pourcentage de variance expliquée par chaque axe principal.
+```{r}
+fam$prctPrcp
+```
+
+Nous vérifions les contributions des variables aux axes principaux.
+```{r}
+fam$varctr
+```
+
+Nous affichons, sur les deux premiers axes principaux, les centres des clusters qui contribuent le plus à ces axes.
+```{r}
+print(fam)
+```
+
+```{r}
+far <- away(fam)
+```
+
+Le cluster `r far$id` contribue à expliquer `r round(fam$ctr[far$id,1]*100, 2)` % de la variance du premier axe. Il est composé de `r far$size` quartiers :
+```{r}
+housing[far$names,]
+```
+
+Ce quartier, que nous avons déjà rencontré dans la précédente analyse est vraiment atypique. Il s'agit d'un petit quartier avec énormément de pièces par foyer. Nous proposons de le retirer.
+```{r}
+boxplot(housing$bedrooms_per_household)
+```
+
+### Quatrième analyse
+
+```{r}
+housing <- housing[!(row.names(housing) %in% far$names),]
+```
+
+```{r}
+X <- housing[,c("longitude", "latitude", "housing_median_age", "rooms_per_household",
+                "bedrooms_per_household", "population_per_household", "median_income",
+                "median_house_value")]
+fam <- fa(X)
+```
+
+Nous affichons le pourcentage de variance expliquée par chaque axe principal.
+```{r}
+fam$prctPrcp
+```
+
+Nous vérifions les contributions des variables aux axes principaux.
+```{r}
+fam$varctr
+```
+
+Nous affichons, sur les deux premiers axes principaux, les centres des clusters qui contribuent le plus à ces axes.
+```{r}
+print(fam)
+```
+
+Nous proposons d'arrêter ici l'analyse exploratoire.

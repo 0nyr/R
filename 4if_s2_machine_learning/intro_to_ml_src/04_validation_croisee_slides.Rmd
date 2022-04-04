@@ -1,0 +1,68 @@
+---
+title: "04 Validation croisée"
+author: Pierre-Edouard Portier
+date: mars 2022
+output: beamer_presentation
+---
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("04_validation_croisee.R", local = knitr::knit_global())
+```
+
+# Principe de la validation croisée
+
+- Quelle valeur pour l'__hyperparamètre__ $\lambda$ ?
+
+$$\hat{\boldsymbol\beta} = \left( \mathbf{X}^T\mathbf{X} + \lambda \mathbf{I}_{n\times n} \right)^{-1} \mathbf{X}^T \mathbf{y}$$
+
+- __Validation croisée__ par partition du jeu de données
+  - __entraînement__ : estimer $\hat{\boldsymbol\beta}$ de chaque modèle
+  - __validation__ : choisir le modèle qui commet la plus faible erreur
+  - __test__ : estimer l'erreur du modèle retenu
+
+# Validation croisée à K plis
+
+- Partitionner le jeu de données en entraînement et test
+- Partitionner le jeu d'entraînement en K plis disjoints
+- Pour chaque valeur $\lambda_i$ de l'hyperparamètre $\lambda$
+  - Apprendre K modèles $M[\lambda_i,k]$ avec $k \in [1\dots K]$
+  - Entraîner $M[\lambda_i,k]$ sur les plis $1,2,\dots,k-1,k+1,\dots,K]$
+  - Tester $M[\lambda_i,k]$ sur le pli $k$
+  - Faire la moyenne des erreurs commises par les $K$ modèles $M[\lambda_i,\cdot]$ sur les jeux de test
+- Choisir la valeur $\lambda_{best}$ qui correspond à la plus faible erreur
+- Apprendre, sur tout le jeu d'entrâinement, un modèle avec l'hyperparamètre $\lambda_{best}$
+- Tester ce modèle sur le jeu de test
+
+# Moyenne des erreurs absolues pour différentes valeurs de $\lambda$
+
+```{r, echo=FALSE}
+set.seed(1123)
+N <- 100
+deg1 <- 8
+data = gendat(N,0.2)
+splitres <- splitdata(data,0.8)
+entr <- splitres$entr
+test <- splitres$test
+lambdas <- c(1E-8, 1E-7, 1E-6, 1E-5, 1E-4, 1E-3, 1E-2, 1E-1, 1)
+reskfold <- kfoldridge(K = 10, lambdas = lambdas, data = entr, degre = deg1)
+boxplot(reskfold$maes, xlab="lambda", ylab="MAE")
+```
+
+# Meilleur poly de degré `r deg1` pour $\lambda=$ `r reskfold$lambda` sur l'entraînement
+
+```{r, echo=FALSE}
+plt(entr,f)
+pltpoly(reskfold$coef)
+```
+
+# Meilleur poly de degré `r deg1` pour $\lambda=$ `r reskfold$lambda` sur le test
+
+```{r, echo=FALSE}
+testpred <- polyeval(reskfold$coef, test$X)
+testmae <- mean(abs(testpred - test$Y))
+plt(test,f)
+pltpoly(reskfold$coef)
+```
+
+- Erreur absolue moyenne de `r testmae` sur le jeu de test

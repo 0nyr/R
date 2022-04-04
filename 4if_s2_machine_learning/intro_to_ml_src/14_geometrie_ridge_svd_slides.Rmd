@@ -1,0 +1,18 @@
+---
+title: "14 Géométrie de la régression ridge et SVD"
+author: Pierre-Edouard Portier
+date: mars 2022
+output: beamer_presentation
+---
+
+# Coefficients de la régression ridge en fonction du SVD
+
+$$\mathbf{\hat{\beta}_\lambda} = \sum_{d_j>0} \mathbf{v_j} \frac{d_j}{d_j^2 + \lambda} \mathbf{u_j}^T\mathbf{y}$$
+
+- Le SVD donne $\mathbf{\hat{\beta}_\lambda}$ pour toutes les valeurs souhaitées de $\lambda$
+
+# Régression ridge et géométrie
+
+$$\mathbf{\hat{y}_\lambda} = \mathbf{U}\mathbf{D}\left(\mathbf{D}^T\mathbf{D} + \lambda\mathbf{I}\right)^{-1}\mathbf{D}^T\mathbf{U}^T \mathbf{y} = \sum_{d_j>0} \mathbf{u_j} \frac{d_j^2}{d_j^2 + \lambda} \mathbf{u_j}^T\mathbf{y}$$
+
+- En présence de régularisation, $\lambda > 0$, les coordonnées, sur les axes principaux, de l'estimation $\mathbf{\hat{y}_\lambda}$ sont de plus en plus contractées lorsqu'on progresse vers les axes qui expliquent de moins en moins la variabilités des données.

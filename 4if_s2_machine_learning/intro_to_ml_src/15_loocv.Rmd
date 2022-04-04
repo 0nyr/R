@@ -1,0 +1,162 @@
+# Validation croisée un contre tous
+
+```{r, include=FALSE}
+source("01_intro.R", local = knitr::knit_global())
+source("04_validation_croisee.R", local = knitr::knit_global())
+source("15_loocv.R", local = knitr::knit_global())
+```
+
+La validation croisée un contre tous (LOOCV, Leave One Out Cross Validation) est un cas extrême de la validation croisée à k plis. Pour un jeu de données constitué de n observations, il s'agit de faire une validation croisée à n plis. Nous estimons par LOOCV l'erreur commise par un modèle de régression ridge pour une valeur fixée de l'hyper-paramètre $\lambda$.
+
+Nous notons $\hat{\boldsymbol\beta}_\lambda^{(-i)}$ les coefficients de la régression ridge apprise en utilisant $n-1$ observations, après avoir retiré la paire $(\mathbf{x_i},y_i)$.
+
+\[
+LOO_\lambda = \frac{1}{n} \sum_{i=1}^{n} \left( y_i - \mathbf{x_i}^T \hat{\boldsymbol\beta}_\lambda^{(-i)} \right)^2
+\]
+
+Nous détaillons l'expression de $\hat{\boldsymbol\beta}_\lambda^{(-i)}$.
+
+\[
+\hat{\boldsymbol\beta}_\lambda^{(-i)} = \left( \mathbf{X^{(-i)}}^T\mathbf{X^{(-i)}} + \lambda\mathbf{I}  \right)^{-1} \mathbf{X^{(-i)}}^T \mathbf{y^{(-i)}}
+\]
+
+Nous précisons le sens de $\mathbf{X^{(-i)}}^T\mathbf{X^{(-i)}} + \lambda\mathbf{I}$.
+
+\[
+\mathbf{X^{(-i)}}^T\mathbf{X^{(-i)}} + \lambda\mathbf{I} = \mathbf{X^T}\mathbf{X} + \lambda\mathbf{I} - \mathbf{x_i}\mathbf{x_i}^T
+\]
+
+Il faut remarquer que nous opérons la soustraction de la matrice $\mathbf{x_i}\mathbf{x_i}^T$ (un produit externe) et non du scalaire $\mathbf{x_i}^T\mathbf{x_i}$.
+
+Comme étape intermédiaire, nous rappelons maintenant la définition de la matrice de chapeau (hat matrix) $\mathbf{H}$.
+
+\[
+\mathbf{\hat{y}_\lambda} = \mathbf{X}\hat{\boldsymbol\beta}_\lambda = \mathbf{X} \left( \mathbf{X}^T \mathbf{X} + \lambda \mathbf{I}\right)^{-1} \mathbf{X}^T \mathbf{y} = \mathbf{H} \mathbf{y}
+\]
+
+Remarque : on parle de la matrice de chapeau, ou matrice de projection car elle "ajoute un chapeau à $\mathbf{y}$". C'est-à-dire qu'elle représente la transformation linéaire, indépendante de $\mathbf{y}$ (elle ne dépend que de $\mathbf{X}$, la matrice des valeurs des variables explicatives pour chaque observation), qui projette les valeurs observées $\mathbf{y}$ sur les valeurs prédites $\mathbf{\hat{y}}$.
+
+Nous avons déjà rencontré un projecteur orthogonal similaire à l'occasion d'un précédent module sur le concept de projecteur. C'était dans le contexte de la régression non régularisée.
+Dans ce cas, $h_{ij}$ s'interprète directement comme l'influence qu'exerce $y_j$ sur la prédiction $\hat{y}_i$. Cette influence ne dépend pas de la valeur $y_j$ puisque $\mathbf{H}$ ne dépend que de $\mathbf{X}$. En général, l'influence de $y_i$ sur la prédiction apparaît le plus directement lorsqu'on regarde son influence sur $\hat{y}_i$. Ainsi, les valeurs $h_{ii}$ (la diagonale de $\mathbf{H}$) permettent d'identifier les points dont l'influence sur le modèle est prépondérante.
+
+Nous utilisons la notation raccourcie $h_i$ pour les éléments diagonaux de la matrice $\mathbf{H}$.
+
+\[
+\mathbf{x_i}^T \left( \mathbf{X}^T \mathbf{X} + \lambda \mathbf{I}\right)^{-1} \mathbf{x_i} = \mathbf{H}_{ii} = h_i
+\]
+
+Dans un précédent module, nous avons découvert la relation entre $\mathbf{\hat{y}_\lambda}$ et $\mathbf{y}$ en fonction de la décomposition en valeurs singulières de $\mathbf{X}$ :
+
+\[
+\mathbf{\hat{y}_\lambda} = \sum_{d_j>0} \mathbf{u_j} \frac{d_j^2}{d_j^2 + \lambda} \mathbf{u_j}^T\mathbf{y}
+\]
+
+En notant $\mathbf{S(\lambda)}$ la matrice diagonale qui compresse les dimensions originales et dont les éléments sont : $\frac{d_j^2}{d_j^2 + \lambda}$, nous avons :
+
+\[
+\mathbf{H(\lambda)} = \mathbf{U} \mathbf{S(\lambda)} \mathbf{U}^T
+\]
+
+Nous pouvons en particulier exprimer les valeurs $h_i$ en fonction du SVD de $\mathbf{X}$ :
+
+\[
+h_i = \sum_{d_j>0} \frac{d_j^2}{d_j^2 + \lambda} u_{ij}
+\]
+
+Observons la trace de $\mathbf{H(\lambda)}$, c'est-à-dire la somme de ses éléments diagonaux, l'expression se simplifie car, comme $\mathbf{U}$ est orthogonale, $\mathbf{u_i}^T\mathbf{u_i}=1$ et  $\mathbf{u_i}^T\mathbf{u_j}=0$ pour $i \neq j$ :
+
+\[
+tr(\mathbf{H(\lambda)}) = \sum_i h_i = \sum_{d_j>0} \frac{d_j^2}{d_j^2 + \lambda}
+\]
+
+Pour la régression non régularisée, $tr(\mathbf{H(0)}) = rang(\mathbf{X})$. Quand $n>p$ et $X$ est de plein rang (i.e., pas de colinéarités), alors $tr(\mathbf{H(0)}) = p$. En général, on dit que $tr(\mathbf{H(0)})$ est le degré de liberté de la régression. Par extension, on parle également de "degré de liberté"  pour $tr(\mathbf{H(\lambda)})$ avec $\lambda \neq 0$. Nous observons que la régularisation Ridge diminue le degré de liberté pour donner un modèle plus "simple" (que celui d'une régression non régularisée) qui a le potentiel de mieux généraliser ses prédictions pour de nouvelles observations.
+
+Rappelons également la formule de Morrison qui permet de calculer la mise à jour de l'inverse d'une matrice $\mathbf{A}$ après l'ajout d'une matrice de rang 1 $\mathbf{u}\mathbf{v}^T$.
+
+\[
+\left( \mathbf{A} + \mathbf{u}\mathbf{v}^T \right)^{-1} = \mathbf{A}^{-1} - \frac{\mathbf{A}^{-1}\mathbf{u}\mathbf{v}^T\mathbf{A}^{-1}}{1 + \mathbf{v}^T\mathbf{A}^{-1}\mathbf{u}}
+\]
+
+Nous utilisons ce résultat pour exprimer l'inversion nécessaire au calcul d'une des $n$ régressions du calcul de l'erreur par LOOCV en fonction de l'inversion nécessaire au calcul de la régression sur toutes les données.
+
+\begin{align*}
+   &\left( \mathbf{X^{(-i)}}^T\mathbf{X^{(-i)}} + \lambda\mathbf{I} \right)^{-1} \\
+=\{& \text{Par définition de } \mathbf{X^{(-i)}} \} \\
+   &\left( \mathbf{X^T}\mathbf{X} + \lambda\mathbf{I} - \mathbf{x_i}\mathbf{x_i}^T \right)^{-1} \\
+=\{& \text{Formule de Morrison et définition de } h_i \} \\
+   &\left( \mathbf{X^T}\mathbf{X} + \lambda\mathbf{I} \right)^{-1} +
+    \frac{\left( \mathbf{X^T}\mathbf{X} + \lambda\mathbf{I} \right)^{-1} \mathbf{x_i}\mathbf{x_i}^T \left( \mathbf{X^T}\mathbf{X} + \lambda\mathbf{I} \right)^{-1}}{1 - h_i}
+\end{align*}
+
+Nous remarquons aussi que :
+\[
+\mathbf{X^{(-i)}}^T \mathbf{y^{(-i)}} = \mathbf{X}^T\mathbf{y} - \mathbf{x_i}y_i
+\]
+
+Ces résultats intermédiaires, nous permettent d'exprimer $\hat{\boldsymbol\beta}_\lambda^{(-i)}$ en fonction de $\hat{\boldsymbol\beta}_\lambda$.
+
+\begin{align*}
+ & \hat{\boldsymbol\beta}_\lambda^{(-i)} \\
+=& \left( \mathbf{X^{(-i)}}^T\mathbf{X^{(-i)}} + \lambda\mathbf{I}  \right)^{-1} \mathbf{X^{(-i)}}^T \mathbf{y^{(-i)}} \\
+=& \left[\left( \mathbf{X^T}\mathbf{X} + \lambda\mathbf{I} \right)^{-1} + \frac{\left( \mathbf{X^T}\mathbf{X} + \lambda\mathbf{I} \right)^{-1} \mathbf{x_i}\mathbf{x_i}^T \left( \mathbf{X^T}\mathbf{X} + \lambda\mathbf{I} \right)^{-1}}{1 - h_i} \right] \left( \mathbf{X}^T\mathbf{y} - \mathbf{x_i}y_i \right) \\
+=& \hat{\boldsymbol\beta}_\lambda - \left[ \frac{\left( \mathbf{X^T}\mathbf{X} + \lambda\mathbf{I} \right)^{-1} \mathbf{x_i}}{1 - h_i}\right] \left[ -\mathbf{x_i}^T\hat{\boldsymbol\beta}_\lambda + h_i y_i + (1-h_i)y_i\right] \\
+=& \hat{\boldsymbol\beta}_\lambda - \frac{\left( \mathbf{X^T}\mathbf{X} + \lambda\mathbf{I} \right)^{-1} \mathbf{x_i}}{1 - h_i} \left( y_i - \hat{y}_{\lambda i}\right)
+\end{align*}
+
+Nous pouvons ainsi découvrir une version de l'expression $\left( y_i - \hat{y}^{(-i)}_{\lambda i} \right)$ qui ne demande pas de calculer un nouveau modèle pour chaque observation $i$ retirée du jeu de données d'entraînement.
+
+\begin{align*}
+ & y_i - \hat{y}^{(-i)}_{\lambda i} \\
+=& y_i - \mathbf{x_i}^T \hat{\boldsymbol\beta}_\lambda^{(-i)} \\
+=& y_i - \mathbf{x_i}^T \left[ \hat{\boldsymbol\beta}_\lambda - \frac{\left( \mathbf{X^T}\mathbf{X} + \lambda\mathbf{I} \right)^{-1} \mathbf{x_i}}{1 - h_i} \left( y_i - \hat{y}_{\lambda i}\right) \right] \\
+=& \left( y_i - \hat{y}_{\lambda i} \right) + \left( y_i - \hat{y}_{\lambda i} \right) \frac{h_i}{1 - h_i} \\
+=& \frac{y_i - \hat{y}_{\lambda i}}{1 - h_i}
+\end{align*}
+
+Finalement, nous avons découvert une expression de l'erreur LOOCV basée sur le SVD de $\mathbf{X}$ :
+
+\begin{align*}
+ &LOO_\lambda = \frac{1}{n} \sum_{i=1}^{n} \left( \frac{y_i - \hat{y}_{\lambda i}}{1 - h_i} \right)^2 \\
+ &\text{avec } h_i = \sum_{d_j>0} \frac{d_j^2}{d_j^2 + \lambda} u_{ij}
+\end{align*}
+
+Nous remarquons que cette mesure de l'erreur peut être instable quand au moins l'un des $h_i$ est proche de $1$. Une solution est de remplacer dans cette expression chaque $h_i$ par la moyenne de tous les $h_i$, c'est-à-dire $\frac{1}{n} tr(\mathbf{H}(\lambda))$. Nous obtenons une nouvelle mesure de l'erreur appelée *validation croisée généralisée* (GCV pour "Generalized Cross Validation").
+
+\begin{align*}
+ &GCV_\lambda = \frac{1}{n} \sum_{i=1}^{n} \left( \frac{y_i - \hat{y}_{\lambda i}}{1 - \frac{1}{n} tr(\mathbf{H}(\lambda))} \right)^2 \\
+ &\text{avec } tr(\mathbf{H}(\lambda)) = \sum_{d_j>0} \frac{d_j^2}{d_j^2 + \lambda}
+\end{align*}
+
+```{r}
+set.seed(1123)
+n <- 100
+deg <- 8
+data = gendat(n,0.2)
+splitres <- splitdata(data,0.8)
+entr <- splitres$entr
+test <- splitres$test
+lambdas <- 10^seq(2,-8,by=-1)
+entr.poly <- outer(c(entr$X), 1:deg, "^")
+rm <- ridge(entr.poly, entr$Y, lambdas)
+plt(entr,f)
+pltpoly(rm$coef)
+```
+
+Ci-dessus, nous avons généré un jeu de données composé de `r n` observations et nous avons calculé par validation croisée un contre tous un polynôme de degré au plus égal à `r deg` qui modélise au mieux ces données. La valeur de $\lambda$ retenue est : `r rm$lambda` et l'erreur absolue moyenne sur le jeu d'entraînement est : `r rm$mae`.
+
+```{r}
+testpred <- polyeval(rm$coef, test$X)
+testmae <- mean(abs(testpred - test$Y))
+```
+
+Ce meilleur modèle atteint une erreur absolue moyenne de `r testmae` sur le jeu de test.
+
+```{r}
+plt(test,f)
+pltpoly(rm$coef)
+```
+
+## Annexe code source
+
+```{r, code=readLines("15_loocv.R"), eval=FALSE}
+```
